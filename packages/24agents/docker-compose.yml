@@ -1,0 +1,56 @@
+services:
+  redis:
+    image: redis/redis-stack-server:latest
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  api:
+    image: redislabs/agent-memory-server:latest
+    ports:
+      - "8000:8000"
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - GENERATION_MODEL=claude-sonnet-4-20250514
+      - FAST_MODEL=claude-haiku-4-5-20251001
+      - DISABLE_AUTH=true
+      - LONG_TERM_MEMORY=true
+      - ENABLE_TOPIC_EXTRACTION=true
+      - ENABLE_NER=true
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/v1/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  task-worker:
+    image: redislabs/agent-memory-server:latest
+    command: ["agent-memory", "task-worker"]
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - GENERATION_MODEL=claude-sonnet-4-20250514
+      - FAST_MODEL=claude-haiku-4-5-20251001
+      - DISABLE_AUTH=true
+      - LONG_TERM_MEMORY=true
+      - ENABLE_TOPIC_EXTRACTION=true
+      - ENABLE_NER=true
+    depends_on:
+      redis:
+        condition: service_healthy
+
+volumes:
+  redis-data:

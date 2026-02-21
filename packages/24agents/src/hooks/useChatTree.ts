@@ -12,7 +12,7 @@ import {
   saveChatTree,
   loadChatTree,
 } from "@/lib/chat-tree"
-import { streamChat, fetchBranches } from "@/lib/sse-client"
+import { streamChat, fetchBranches, persistToMemory } from "@/lib/sse-client"
 
 export function useChatTree(treeId?: string, personaId: string | null = null) {
   const [tree, setTree] = useState<ChatTree>(() => {
@@ -59,7 +59,7 @@ export function useChatTree(treeId?: string, personaId: string | null = null) {
       let fullResponse = ""
 
       try {
-        for await (const chunk of streamChat(content, history.slice(0, -1), systemPrompt)) {
+        for await (const chunk of streamChat(content, history.slice(0, -1), systemPrompt, tree.id)) {
           fullResponse += chunk
           setStreamingContent(fullResponse)
         }
@@ -85,6 +85,15 @@ export function useChatTree(treeId?: string, personaId: string | null = null) {
         )
         const withBranches = setBranches(updated, assistantNode.id, branches)
         persist(withBranches)
+
+        // Fire-and-forget: persist conversation to long-term memory
+        const fullHistory = getConversationHistory(withBranches, assistantNode.id)
+        persistToMemory(
+          withBranches.id,
+          fullHistory,
+          withBranches.title,
+          withBranches.personaId,
+        ).catch(() => {})
       } catch {
         // Branches are optional, continue without them
       }

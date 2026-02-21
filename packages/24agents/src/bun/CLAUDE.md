@@ -19,11 +19,16 @@ Electrobun main process and API server. This is the backend/native layer of the 
   - `POST /api/chat/branches` - Branch suggestions endpoint. Accepts `{ conversationContext, currentResponse, personaPrompt? }`. Asks Claude for 3 branching paths and returns them as JSON. Falls back to generic suggestions on failure.
   - `POST /api/chat/rewrite` - Prompt rewrite endpoint. Accepts `{ prompt, personaPrompt, iterationContext? }`. Asks Claude to rewrite the prompt from the persona's perspective and return `{ refinedPrompt, responseText, score: { C, F, N, R } }`. Falls back to original prompt on parse failure.
   - `POST /api/chat/persona-paths` - Persona paths endpoint. Accepts `{ prompt, personas: {id, name, description}[] }`. Returns `{ paths: PersonaPath[] }` describing how each persona would approach the prompt. Falls back to generic descriptions on failure.
+  - `POST /api/memory/persist` - Persists conversation messages to long-term memory via agent-memory-server. Accepts `{ sessionId, messages, title?, personaId? }`. Deduplication enabled.
+  - `POST /api/memory/search` - Semantic search across past conversations. Accepts `{ query, limit? }`. Returns `{ memories, total }`.
+- The `/api/chat` endpoint accepts an optional `sessionId` field. When provided, it enriches the system prompt with relevant past context via `getMemoryPrompt()` and syncs the conversation to working memory after streaming completes (fire-and-forget).
 - All API responses include CORS headers (`Access-Control-Allow-Origin: *`) since the Electrobun webview loads from `views://` protocol.
 - The server loads `.env.local` by walking up directories from `import.meta.dir` to find the project root, since Electrobun runs the bundled server from inside the `.app` bundle.
+- `memory-client.ts` is a thin fetch wrapper for the agent-memory-server REST API (`/v1/working-memory`, `/v1/long-term-memory`, `/v1/memory/prompt`). All functions have a 2s timeout and fail silently — the memory server is optional infrastructure.
 
 ## Conventions
 
 - Do not import browser/DOM APIs here. This runs in Bun, not a browser.
 - Use Electrobun's `Updater.localInfo.channel()` to detect dev vs production.
 - API key is read from `ANTHROPIC_API_KEY` in `.env.local`. Uses `@anthropic-ai/sdk` (not `claude-agent-sdk`).
+- Memory server calls must never block or break the main chat flow. All memory-client functions catch errors internally.
