@@ -230,14 +230,17 @@ You MUST return ONLY a valid JSON object with this exact structure:
     { "title": "Section Title", "content": "Detailed markdown content for this section..." }
   ],
   "branches": [
-    { "label": "Short Path Title", "description": "One sentence describing where this path leads" }
-  ]
+    { "label": "Short Path Title", "description": "One sentence describing where this path leads", "score": { "C": 7, "F": 8, "N": 6, "R": 9 } }
+  ],
+  "promptScore": { "C": 7, "F": 8, "N": 6, "R": 9 }
 }
 
 Rules:
 - Include 3-4 sections that thoroughly address the topic. Each section should have meaningful markdown content (2-4 paragraphs).
 - Include 2-3 branching paths that suggest interesting next directions to explore from the current topic.
 - Branch labels should be 2-5 words. Branch descriptions should be one sentence.
+- Each branch gets a "score" object rating how promising that path is: C (Clarity 1-10), F (Feasibility 1-10), N (Novelty 1-10), R (Relevance 1-10).
+- "promptScore" rates the user's input prompt quality using the same CFNR scale.
 - Return ONLY the JSON object. No other text, no code fences, no explanation.`;
 
           try {
@@ -263,18 +266,34 @@ Rules:
                 title: s.title || "Section",
                 content: s.content || "",
               }));
-              const branches = (parsed.branches || []).slice(0, 3).map((b: Record<string, string>, i: number) => ({
-                id: crypto.randomUUID(),
-                label: b.label || `Path ${i + 1}`,
-                description: b.description || "",
-              }));
+              const branches = (parsed.branches || []).slice(0, 3).map((b: Record<string, unknown>, i: number) => {
+                const bScore = b.score as Record<string, number> | undefined;
+                return {
+                  id: crypto.randomUUID(),
+                  label: (b.label as string) || `Path ${i + 1}`,
+                  description: (b.description as string) || "",
+                  previewScore: bScore ? {
+                    C: Math.min(10, Math.max(1, bScore.C ?? 5)),
+                    F: Math.min(10, Math.max(1, bScore.F ?? 5)),
+                    N: Math.min(10, Math.max(1, bScore.N ?? 5)),
+                    R: Math.min(10, Math.max(1, bScore.R ?? 5)),
+                  } : null,
+                };
+              });
+
+              const promptScore = parsed.promptScore ? {
+                C: Math.min(10, Math.max(1, parsed.promptScore.C ?? 5)),
+                F: Math.min(10, Math.max(1, parsed.promptScore.F ?? 5)),
+                N: Math.min(10, Math.max(1, parsed.promptScore.N ?? 5)),
+                R: Math.min(10, Math.max(1, parsed.promptScore.R ?? 5)),
+              } : null;
 
               // Fire-and-forget: sync to working memory
               if (sessionId) {
                 putWorkingMemory(sessionId, { messages }).catch(() => {});
               }
 
-              return Response.json({ sections, branches }, { headers: CORS_HEADERS });
+              return Response.json({ sections, branches, promptScore }, { headers: CORS_HEADERS });
             }
 
             return Response.json({
@@ -286,6 +305,62 @@ Rules:
             return Response.json({
               error: `Exploration failed: ${error}`,
             }, { status: 500, headers: CORS_HEADERS });
+          }
+        },
+      },
+      "/api/chat/score-prompt": {
+        POST: async (req) => {
+          let body: { prompt?: string; systemPrompt?: string };
+          try {
+            body = await req.json();
+          } catch {
+            return Response.json({ error: "Invalid JSON body" }, { status: 400, headers: CORS_HEADERS });
+          }
+
+          const { prompt, systemPrompt } = body;
+          if (!prompt || typeof prompt !== "string" || prompt.trim() === "") {
+            return Response.json({ error: "prompt is required" }, { status: 400, headers: CORS_HEADERS });
+          }
+
+          const system = `${systemPrompt ? systemPrompt + "\n\n" : ""}You evaluate prompt quality. Rate the given prompt on four dimensions, each 1-10:
+- C (Clarity): How clear and unambiguous is this prompt?
+- F (Feasibility): How actionable and achievable is this?
+- N (Novelty): How creative or original is the approach?
+- R (Relevance): How well does it address its stated goal?
+
+Return ONLY a JSON object: { "score": { "C": number, "F": number, "N": number, "R": number } }`;
+
+          try {
+            const response = await client.messages.create({
+              model: MODEL,
+              max_tokens: 256,
+              system,
+              messages: [{ role: "user", content: `Rate this prompt:\n\n"${prompt}"` }],
+            });
+
+            let fullResult = "";
+            for (const block of response.content) {
+              if (block.type === "text") fullResult += block.text;
+            }
+
+            const jsonMatch = fullResult.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+              const parsed = JSON.parse(jsonMatch[0]);
+              const s = parsed.score || parsed;
+              return Response.json({
+                score: {
+                  C: Math.min(10, Math.max(1, s.C ?? 5)),
+                  F: Math.min(10, Math.max(1, s.F ?? 5)),
+                  N: Math.min(10, Math.max(1, s.N ?? 5)),
+                  R: Math.min(10, Math.max(1, s.R ?? 5)),
+                },
+              }, { headers: CORS_HEADERS });
+            }
+
+            return Response.json({ score: { C: 5, F: 5, N: 5, R: 5 } }, { headers: CORS_HEADERS });
+          } catch (error) {
+            console.error("Score prompt error:", error);
+            return Response.json({ score: { C: 5, F: 5, N: 5, R: 5 } }, { headers: CORS_HEADERS });
           }
         },
       },

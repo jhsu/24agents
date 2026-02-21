@@ -1,3 +1,5 @@
+import type { IterationScore } from "./iteration"
+
 export interface ExploreSection {
   id: string
   title: string
@@ -8,6 +10,7 @@ export interface ExploreBranch {
   id: string
   label: string
   description: string
+  previewScore: IterationScore | null
 }
 
 export interface ExploreStep {
@@ -17,7 +20,27 @@ export interface ExploreStep {
   branches: ExploreBranch[]
   selectedBranchId: string | null
   parentStepId: string | null
+  score: IterationScore | null
+  refinements: PromptRefinement[]
+  activeRefinementId: string | null
   createdAt: number
+}
+
+export interface PromptRefinement {
+  id: string
+  personaId: string
+  personaName: string
+  refinedPrompt: string
+  reasoning: string
+  score: IterationScore
+  createdAt: number
+}
+
+export interface PendingExploration {
+  originalPrompt: string
+  refinements: PromptRefinement[]
+  activeRefinementId: string | null
+  parentStepId: string | null
 }
 
 export interface ExploreSession {
@@ -57,6 +80,9 @@ export function createStep(
   sections: ExploreSection[],
   branches: ExploreBranch[],
   parentStepId: string | null,
+  score: IterationScore | null = null,
+  refinements: PromptRefinement[] = [],
+  activeRefinementId: string | null = null,
 ): ExploreStep {
   return {
     id: crypto.randomUUID(),
@@ -65,6 +91,9 @@ export function createStep(
     branches,
     selectedBranchId: null,
     parentStepId,
+    score,
+    refinements,
+    activeRefinementId,
     createdAt: Date.now(),
   }
 }

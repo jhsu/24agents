@@ -3,6 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { ChevronDown, ChevronRight, Layers } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { ScoreRow } from "@/components/ScoreBadge"
+import type { IterationScore } from "@/lib/iteration"
 
 interface SectionWithMeta {
   id: string
@@ -10,6 +12,7 @@ interface SectionWithMeta {
   content: string
   stepId: string
   stepPrompt: string
+  stepScore?: IterationScore | null
 }
 
 interface SectionPanelProps {
@@ -23,13 +26,13 @@ export function SectionPanel({ sections, isLoading }: SectionPanelProps) {
 
   // Group sections by step
   const groupedByStep = React.useMemo(() => {
-    const groups: { stepId: string; stepPrompt: string; sections: SectionWithMeta[] }[] = []
+    const groups: { stepId: string; stepPrompt: string; stepScore: IterationScore | null; sections: SectionWithMeta[] }[] = []
     for (const section of sections) {
       const last = groups[groups.length - 1]
       if (last && last.stepId === section.stepId) {
         last.sections.push(section)
       } else {
-        groups.push({ stepId: section.stepId, stepPrompt: section.stepPrompt, sections: [section] })
+        groups.push({ stepId: section.stepId, stepPrompt: section.stepPrompt, stepScore: section.stepScore ?? null, sections: [section] })
       }
     }
     return groups
@@ -69,7 +72,7 @@ export function SectionPanel({ sections, isLoading }: SectionPanelProps) {
         {groupedByStep.map((group, groupIdx) => (
           <div key={group.stepId}>
             {/* Step header */}
-            <div className="flex items-center gap-2 mb-3">
+            <div className="flex items-center gap-2 mb-1">
               <span className="flex items-center justify-center h-5 w-5 rounded-full bg-green-600 text-white text-[10px] font-bold shrink-0">
                 {groupIdx + 1}
               </span>
@@ -77,6 +80,12 @@ export function SectionPanel({ sections, isLoading }: SectionPanelProps) {
                 {group.stepPrompt}
               </span>
             </div>
+            {group.stepScore && (
+              <div className="mb-3 ml-7">
+                <ScoreRow score={group.stepScore} />
+              </div>
+            )}
+            {!group.stepScore && <div className="mb-2" />}
 
             {/* Section cards */}
             <div className="space-y-3 pl-3 border-l-2 border-green-600/30">

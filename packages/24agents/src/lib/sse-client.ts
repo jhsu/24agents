@@ -1,6 +1,7 @@
 import type { BranchSuggestion } from "./chat-tree"
 import type { ExternalResource } from "./iteration"
 import type { ExploreSection, ExploreBranch } from "./exploration"
+import type { IterationScore } from "./iteration"
 
 const API_BASE = "http://localhost:4000"
 
@@ -56,7 +57,7 @@ export async function explorePrompt(
   history: { role: string; content: string }[] = [],
   systemPrompt?: string,
   sessionId?: string,
-): Promise<{ sections: ExploreSection[]; branches: ExploreBranch[] }> {
+): Promise<{ sections: ExploreSection[]; branches: ExploreBranch[]; promptScore: IterationScore | null }> {
   const res = await fetch(`${API_BASE}/api/chat/explore`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -72,7 +73,26 @@ export async function explorePrompt(
   return {
     sections: data.sections ?? [],
     branches: data.branches ?? [],
+    promptScore: data.promptScore ?? null,
   }
+}
+
+export async function scorePrompt(
+  prompt: string,
+  systemPrompt?: string,
+): Promise<IterationScore> {
+  const res = await fetch(`${API_BASE}/api/chat/score-prompt`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ prompt, systemPrompt }),
+  })
+
+  if (!res.ok) {
+    return { C: 5, F: 5, N: 5, R: 5 }
+  }
+
+  const data = await res.json()
+  return data.score ?? { C: 5, F: 5, N: 5, R: 5 }
 }
 
 export async function fetchBranches(

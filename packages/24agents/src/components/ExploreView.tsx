@@ -6,6 +6,8 @@ import { Textarea } from "@/components/ui/textarea"
 import { Skeleton } from "@/components/ui/skeleton"
 import { PersonaSelector } from "@/components/PersonaSelector"
 import { SectionPanel } from "@/components/SectionPanel"
+import { RefinementPanel } from "@/components/RefinementPanel"
+import { ScoreRow } from "@/components/ScoreBadge"
 import { useExploration } from "@/hooks/useExploration"
 import type { Persona } from "@/lib/persona"
 import {
@@ -17,6 +19,7 @@ import {
   ArrowRight,
   Trash2,
   Loader2,
+  Sparkles,
 } from "lucide-react"
 
 export function ExploreView() {
@@ -35,6 +38,18 @@ export function ExploreView() {
     removeSession,
     reset,
     refreshList,
+    // Refinement
+    pending,
+    isScoring,
+    isRefining,
+    personaPaths,
+    isLoadingPaths,
+    previewBranch,
+    scoreAndRefine,
+    refinePrompt,
+    selectRefinement,
+    commitExploration,
+    cancelRefinement,
   } = useExploration()
 
   const [prompt, setPrompt] = React.useState("")
@@ -45,6 +60,13 @@ export function ExploreView() {
     const trimmed = prompt.trim()
     if (!trimmed || isLoading) return
     startExploration(trimmed)
+    setPrompt("")
+  }
+
+  const handleScoreAndRefine = () => {
+    const trimmed = prompt.trim()
+    if (!trimmed || isLoading || isScoring) return
+    scoreAndRefine(trimmed)
     setPrompt("")
   }
 
@@ -111,6 +133,19 @@ export function ExploreView() {
           }}
           onDelete={removeSession}
         />
+      ) : pending ? (
+        /* Refinement mode */
+        <RefinementPanel
+          pending={pending}
+          personaPaths={personaPaths}
+          isLoadingPaths={isLoadingPaths}
+          isRefining={isRefining}
+          isLoading={isLoading}
+          onRefine={refinePrompt}
+          onSelectRefinement={selectRefinement}
+          onCommit={commitExploration}
+          onCancel={cancelRefinement}
+        />
       ) : hasContent ? (
         <div className="flex-1 min-h-0 flex">
           {/* Left: Section cards */}
@@ -145,8 +180,7 @@ export function ExploreView() {
                   currentStep.branches.map((branch) => (
                     <Card
                       key={branch.id}
-                      className="cursor-pointer hover:border-green-600/50 hover:bg-green-600/5 transition-colors group"
-                      onClick={() => selectBranch(branch.id)}
+                      className="hover:border-green-600/50 hover:bg-green-600/5 transition-colors group"
                     >
                       <CardHeader className="pb-1.5 pt-3 px-4">
                         <CardTitle className="text-sm font-semibold flex items-center justify-between">
@@ -154,10 +188,33 @@ export function ExploreView() {
                           <ArrowRight className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                         </CardTitle>
                       </CardHeader>
-                      <CardContent className="pt-0 px-4 pb-3">
+                      <CardContent className="pt-0 px-4 pb-3 space-y-2">
                         <p className="text-xs text-muted-foreground">
                           {branch.description}
                         </p>
+                        {branch.previewScore && (
+                          <ScoreRow score={branch.previewScore} />
+                        )}
+                        <div className="flex items-center gap-2 pt-1">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="flex-1 h-7 text-xs gap-1"
+                            onClick={() => previewBranch(branch.id)}
+                            disabled={isLoading}
+                          >
+                            <Sparkles className="h-3 w-3" />
+                            Refine
+                          </Button>
+                          <Button
+                            size="sm"
+                            className="flex-1 h-7 text-xs bg-green-600 hover:bg-green-700"
+                            onClick={() => selectBranch(branch.id)}
+                            disabled={isLoading}
+                          >
+                            Explore
+                          </Button>
+                        </div>
                       </CardContent>
                     </Card>
                   ))
@@ -167,7 +224,7 @@ export function ExploreView() {
                   </p>
                 )}
 
-                {/* Show breadcrumb of explored steps */}
+                {/* Exploration path breadcrumb */}
                 {session && session.steps.length > 1 && (
                   <div className="mt-4 pt-4 border-t border-border">
                     <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2 block">
@@ -220,7 +277,7 @@ export function ExploreView() {
       )}
 
       {/* Bottom prompt bar */}
-      {!showHistory && (
+      {!showHistory && !pending && (
         <div className="shrink-0 border-t border-border p-3">
           <div className="flex items-end gap-2 max-w-4xl mx-auto">
             <Textarea
@@ -231,12 +288,27 @@ export function ExploreView() {
               placeholder={hasContent ? "Ask a follow-up question..." : "What do you want to explore?"}
               className="min-h-[44px] max-h-32 resize-none"
               rows={1}
-              disabled={isLoading}
+              disabled={isLoading || isScoring}
             />
             <Button
               size="sm"
+              variant="outline"
+              onClick={handleScoreAndRefine}
+              disabled={!prompt.trim() || isLoading || isScoring}
+              className="shrink-0 h-[44px] px-3 gap-1.5"
+              title="Score & Refine before exploring"
+            >
+              {isScoring ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Sparkles className="h-4 w-4" />
+              )}
+              <span className="hidden sm:inline text-xs">Refine</span>
+            </Button>
+            <Button
+              size="sm"
               onClick={handleSubmit}
-              disabled={!prompt.trim() || isLoading}
+              disabled={!prompt.trim() || isLoading || isScoring}
               className="shrink-0 h-[44px] px-4 bg-green-600 hover:bg-green-700"
             >
               {isLoading ? (
