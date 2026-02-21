@@ -12,10 +12,13 @@
     "chat": "bun --hot server.ts"
   },
   "dependencies": {
+    "@ai-sdk/anthropic": "^3.0.46",
+    "@ai-sdk/openai": "^3.0.30",
     "@anthropic-ai/claude-agent-sdk": "latest",
     "@json-render/core": "^0.8.0",
     "@json-render/react": "^0.8.0",
     "@tailwindcss/postcss": "^4.2.0",
+    "ai": "^6.0.97",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "electrobun": "1.13.1",

@@ -1,88 +1,69 @@
-import { query } from "@anthropic-ai/claude-agent-sdk";
+import { catalog } from "../lib/json-render/catalog";
+// import type { UIMessage } from 'ai';
+import { streamText } from "ai";
+import { pipeJsonRender } from "@json-render/core";
+import { createUIMessageStream, createUIMessageStreamResponse } from "ai";
+import { anthropic } from "@ai-sdk/anthropic";
 
 export async function startServer() {
   return Bun.serve({
     port: 4000,
     routes: {
       "/health": () => new Response("OK"),
-      "/test": () => {
-        const prompt = "Hello, how are you?";
-          const encoder = new TextEncoder();
-          const stream = new ReadableStream({
-            async start(controller) {
-              const send = (data: unknown) => {
-                controller.enqueue(
-                  encoder.encode(`data: ${JSON.stringify(data)}\n\n`)
-                );
-              };
+      "/test": async () => {
+        const result = streamText({
+          model: anthropic("claude-haiku-4-5"),
+          system: '',
+          prompt: "hello",
+        });
 
-              try {
-                for await (const message of query({ prompt, options: {
-                  pathToClaudeCodeExecutable: "/Users/joseph/.local/bin/claude"
-                } })) {
-                  send(message);
-                }
-              } catch (error) {
-                send({ type: "error", error: String(error) });
-              } finally {
-                controller.enqueue(encoder.encode("data: [DONE]\n\n"));
-                controller.close();
-              }
-            }
-          })
-          return new Response(stream, {
-            headers: {
-              "Content-Type": "text/event-stream",
-              "Cache-Control": "no-cache",
-              Connection: "keep-alive",
-            },
-          });
+        const stream = createUIMessageStream({
+          execute: async ({ writer }) => {
+            writer.merge(pipeJsonRender(result.toUIMessageStream()));
+          },
+        });
+        return createUIMessageStreamResponse({ stream });
       },
-      "/api/chat": {
-        POST: async (req) => {
-          let body: { prompt?: string; allowedTools?: string[] };
+      "/api/persona-ui": {
+        "POST": async (req) => {
+          let body: { name?: string; description?: string };
           try {
             body = await req.json();
           } catch {
             return Response.json({ error: "Invalid JSON body" }, { status: 400 });
           }
+          const userPrompt = `Generate the UI to control the persona ${body.name} with the description ${body.description}`;
 
-          const { prompt, allowedTools } = body;
-          if (!prompt || typeof prompt !== "string" || prompt.trim() === "") {
-            return Response.json({ error: "prompt is required" }, { status: 400 });
-          }
-
-          const encoder = new TextEncoder();
-          const stream = new ReadableStream({
-            async start(controller) {
-              const send = (data: unknown) => {
-                controller.enqueue(
-                  encoder.encode(`data: ${JSON.stringify(data)}\n\n`)
-                );
-              };
-
-              try {
-                const options =
-                  allowedTools !== undefined ? { allowedTools } : {};
-                for await (const message of query({ prompt, options })) {
-                  send(message);
-                }
-              } catch (error) {
-                send({ type: "error", error: String(error) });
-              } finally {
-                controller.enqueue(encoder.encode("data: [DONE]\n\n"));
-                controller.close();
-              }
-            },
+          const systemPrompt = catalog.prompt();
+          const result = streamText({
+            model: anthropic("claude-haiku-4-5"),
+            system: systemPrompt,
+            prompt: userPrompt,
           });
 
-          return new Response(stream, {
-            headers: {
-              "Content-Type": "text/event-stream",
-              "Cache-Control": "no-cache",
-              Connection: "keep-alive",
+          const stream = createUIMessageStream({
+            execute: async ({ writer }) => {
+              writer.merge(pipeJsonRender(result.toUIMessageStream()));
             },
           });
+          return createUIMessageStreamResponse({ stream });
+          
+        }
+      },
+      "/api/chat": {
+        POST: async (req) => {
+          const payload = await req.json();
+          const result = streamText({
+            model: anthropic("claude-haiku-4-5"),
+            system: '',
+            messages: payload.messagse,
+          });
+          const stream = createUIMessageStream({
+            execute: async ({ writer }) => {
+              writer.merge(pipeJsonRender(result.toUIMessageStream()));
+            },
+          });
+          return createUIMessageStreamResponse({ stream });
         },
       },
     },
