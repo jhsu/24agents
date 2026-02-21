@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-24agents is a desktop app for exploring ideas with AI through branching conversations and iterative prompt refinement. Users create personas that guide the AI's perspective. The app has two main modes: (1) a **Persona Chat Workspace** where users refine prompts through multiple personas with an iteration timeline and CFNR scoring, and (2) a **Branching Chat** where the AI suggests 2-3 branching paths to explore after each response, building a tree of explored ideas. A tabbed interface (Chat, Persona UI, Manage Personas) ties them together.
+24agents is a desktop app for exploring ideas with AI through structured, branching exploration. Users enter a prompt, the AI responds with structured sections (e.g., "Ingredients", "Preparation", "Tips") plus 2-3 branching paths to explore further. Selecting a branch recursively generates new sections and branches, building a tree of explored ideas. Users create personas that guide the AI's perspective. A 2-tab interface (Explore, Manage Personas) ties it together.
 
 ## Commands
 
@@ -44,22 +44,17 @@ bun test
 ## Key Files
 
 - `src/bun/index.ts` - Electrobun main process, creates browser window
-- `src/bun/server.ts` - Bun HTTP server (port 4000) with chat, branches, rewrite, persona-paths, and memory API endpoints, uses `@anthropic-ai/sdk` directly
+- `src/bun/server.ts` - Bun HTTP server (port 4000) with explore, chat, branches, rewrite, persona-paths, and memory API endpoints, uses `@anthropic-ai/sdk` directly
 - `src/bun/memory-client.ts` - Thin fetch wrapper for redis/agent-memory-server REST API (working memory, long-term memory, memory prompt enrichment). All calls fail silently if the memory server is unavailable.
-- `src/mainview/App.tsx` - React root component, renders 3-tab layout (Chat, Persona UI, Manage Personas)
-- `src/components/PersonaChatWorkspace.tsx` - Prompt refinement workspace: top bar with session history/new, prompt bar, two-column layout (iteration timeline left, persona paths right)
-- `src/components/PromptBar.tsx` - Prompt input bar with Generate and Reset buttons
-- `src/components/IterationTimeline.tsx` - Left column showing iteration cards with persona name, refined prompt, response, and CFNR scores
-- `src/components/PersonaPathsPanel.tsx` - Right column showing persona path cards with Follow Persona buttons
-- `src/components/BranchingChat.tsx` - Branching chat UI with tree navigation (in Persona UI tab)
+- `src/mainview/App.tsx` - React root component, renders 2-tab layout (Explore, Manage Personas)
+- `src/components/ExploreView.tsx` - Unified exploration view. Top bar with history/new/persona selector, two-column layout (section cards left, branch paths right), bottom prompt bar. Replaces the old PersonaChatWorkspace and BranchingChat.
+- `src/components/SectionPanel.tsx` - Left panel showing stacked section cards grouped by exploration step, with step indicators, collapsible content, and simple markdown rendering.
+- `src/components/PersonaSelector.tsx` - Dropdown (shadcn DropdownMenu) to pick active persona from localStorage.
 - `src/components/PersonaManagement.tsx` - Persona CRUD with clipboard serialization (in Manage Personas tab)
-- `src/lib/chat-tree.ts` - Chat tree data model, types, and localStorage persistence
-- `src/lib/iteration.ts` - Iteration data model (Iteration, IterationScore, PersonaPath, PromptSession, SessionListEntry) and localStorage persistence with session list index
-- `src/lib/sse-client.ts` - API client for chat streaming, branches, prompt rewriting, persona paths, and memory persistence/search
+- `src/lib/exploration.ts` - Exploration data model. Defines `ExploreSection`, `ExploreBranch`, `ExploreStep`, `ExploreSession`, `ExploreSessionListEntry` types. Persistence via localStorage at `"24agents:explore:{id}"` per session and `"24agents:explore-list"` for the index.
+- `src/lib/sse-client.ts` - API client for explore endpoint, chat streaming, branches, prompt rewriting, persona paths, and memory persistence/search
 - `src/lib/persona.ts` - Shared persona serialization and localStorage helpers
-- `src/hooks/useChatTree.ts` - Chat tree state management hook
-- `src/hooks/usePromptSession.ts` - Prompt session state management hook (generate → follow persona → iterate) with session history (save/load/delete)
-- `src/hooks/useChatList.ts` - Conversation list management hook
+- `src/hooks/useExploration.ts` - Exploration state management hook (startExploration → selectBranch → recurse). Manages session history, persona integration, loading/error states.
 - `electrobun.config.ts` - Desktop app build config
 - `vite.config.ts` - Frontend build config
 - `docker-compose.yml` - Redis Stack + agent-memory-server for cross-conversation memory (optional, app works without it)

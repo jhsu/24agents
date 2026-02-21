@@ -10,7 +10,7 @@ Frontend entry point and renderer process. This is what runs in the browser wind
 
 - `index.html` - HTML shell. Sets `class="dark"` on `<html>` for dark-mode-only theming. Mounts React into `<div id="root">`.
 - `main.tsx` - React entry point. Renders `<App />` in `StrictMode` into the root div.
-- `App.tsx` - Root React component. Renders a 3-tab layout using shadcn Tabs: "Chat" (PersonaChatWorkspace), "Persona UI" (BranchingChat), "Manage Personas" (PersonaManagement). Active tabs have green styling. Inactive tabs are hidden via `data-[state=inactive]:hidden`.
+- `App.tsx` - Root React component. Renders a 2-tab layout using shadcn Tabs: "Explore" (ExploreView) and "Manage Personas" (PersonaManagement). Active tabs have green styling. Inactive tabs are hidden via `data-[state=inactive]:hidden`.
 
 ## Conventions
 

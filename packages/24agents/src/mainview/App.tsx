@@ -1,36 +1,29 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { PersonaChatWorkspace } from "@/components/PersonaChatWorkspace"
-import { BranchingChat } from "@/components/BranchingChat"
+import { ExploreView } from "@/components/ExploreView"
 import { PersonaManagement } from "@/components/PersonaManagement"
+import { Compass, Settings } from "lucide-react"
 
 function App() {
   return (
-    <Tabs defaultValue="chat" className="flex flex-col h-screen">
-      <TabsList className="shrink-0 w-full justify-start rounded-none border-b border-border bg-background px-2">
+    <Tabs defaultValue="explore" className="flex flex-col h-screen">
+      <TabsList className="shrink-0 w-full justify-start rounded-none border-b border-border bg-background px-3 py-1.5 gap-1">
         <TabsTrigger
-          value="chat"
-          className="data-[state=active]:bg-green-600 data-[state=active]:text-white rounded-md"
+          value="explore"
+          className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-lg data-[state=active]:bg-green-600 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:shadow-green-600/25 data-[state=inactive]:hover:bg-muted/50 data-[state=inactive]:hover:text-foreground"
         >
-          Chat
-        </TabsTrigger>
-        <TabsTrigger
-          value="persona-ui"
-          className="data-[state=active]:bg-green-600 data-[state=active]:text-white rounded-md"
-        >
-          Persona UI
+          <Compass className="h-4 w-4" />
+          Explore
         </TabsTrigger>
         <TabsTrigger
           value="manage"
-          className="data-[state=active]:bg-green-600 data-[state=active]:text-white rounded-md"
+          className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-lg data-[state=active]:bg-green-600 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:shadow-green-600/25 data-[state=inactive]:hover:bg-muted/50 data-[state=inactive]:hover:text-foreground"
         >
+          <Settings className="h-4 w-4" />
           Manage Personas
         </TabsTrigger>
       </TabsList>
-      <TabsContent value="chat" className="flex-1 min-h-0 mt-0 data-[state=inactive]:hidden">
-        <PersonaChatWorkspace />
-      </TabsContent>
-      <TabsContent value="persona-ui" className="flex-1 min-h-0 mt-0 data-[state=inactive]:hidden">
-        <BranchingChat />
+      <TabsContent value="explore" className="flex-1 min-h-0 mt-0 data-[state=inactive]:hidden">
+        <ExploreView />
       </TabsContent>
       <TabsContent value="manage" className="flex-1 min-h-0 mt-0 overflow-auto data-[state=inactive]:hidden">
         <PersonaManagement />

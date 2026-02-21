@@ -1,4 +1,6 @@
 import type { BranchSuggestion } from "./chat-tree"
+import type { ExternalResource } from "./iteration"
+import type { ExploreSection, ExploreBranch } from "./exploration"
 
 const API_BASE = "http://localhost:4000"
 
@@ -49,6 +51,30 @@ export async function* streamChat(
   }
 }
 
+export async function explorePrompt(
+  prompt: string,
+  history: { role: string; content: string }[] = [],
+  systemPrompt?: string,
+  sessionId?: string,
+): Promise<{ sections: ExploreSection[]; branches: ExploreBranch[] }> {
+  const res = await fetch(`${API_BASE}/api/chat/explore`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ prompt, history, systemPrompt, sessionId }),
+  })
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: "Unknown error" }))
+    throw new Error(err.error || `Explore request failed: ${res.status}`)
+  }
+
+  const data = await res.json()
+  return {
+    sections: data.sections ?? [],
+    branches: data.branches ?? [],
+  }
+}
+
 export async function fetchBranches(
   conversationContext: { role: "user" | "assistant"; content: string }[],
   currentResponse: string,
@@ -89,11 +115,13 @@ export async function rewritePrompt(
   prompt: string,
   personaPrompt: string,
   iterationContext?: string,
+  promptContext?: string,
+  promptGoals?: string,
 ): Promise<{ refinedPrompt: string; responseText: string; score: { C: number; F: number; N: number; R: number } }> {
   const res = await fetch(`${API_BASE}/api/chat/rewrite`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ prompt, personaPrompt, iterationContext }),
+    body: JSON.stringify({ prompt, personaPrompt, iterationContext, context: promptContext, goals: promptGoals }),
   })
 
   if (!res.ok) {
@@ -119,6 +147,43 @@ export async function fetchPersonaPaths(
 
   const data = await res.json()
   return data.paths ?? []
+}
+
+export async function generatePersonaSettings(
+  name: string,
+  description: string,
+): Promise<{ spec: unknown | null; state: Record<string, unknown> | null }> {
+  try {
+    const res = await fetch(`${API_BASE}/api/persona/generate-settings`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, description }),
+    })
+    if (!res.ok) return { spec: null, state: null }
+    return await res.json()
+  } catch {
+    return { spec: null, state: null }
+  }
+}
+
+export async function fetchResources(
+  prompt: string,
+  context?: string,
+  goals?: string,
+  personaName?: string,
+): Promise<ExternalResource[]> {
+  try {
+    const res = await fetch(`${API_BASE}/api/chat/resources`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt, context, goals, personaName }),
+    })
+    if (!res.ok) return []
+    const data = await res.json()
+    return data.resources ?? []
+  } catch {
+    return []
+  }
 }
 
 export async function searchMemory(

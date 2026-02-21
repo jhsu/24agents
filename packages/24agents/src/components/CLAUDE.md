@@ -6,19 +6,19 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 React components for the 24agents app. Feature components live at this level; reusable UI primitives live in `ui/`.
 
-## Current Components
+## Current Components (Active)
 
-- `BranchingChat.tsx` - Main app view. Full-height layout with top bar (breadcrumb, history, persona selector), scrollable chat area, and bottom input. Orchestrates the chat tree, streaming, and branch selection.
-- `ChatMessage.tsx` - Single message bubble with Avatar. User messages right-aligned with bg-primary, assistant messages left-aligned with bg-muted. Supports streaming state.
-- `BranchSelector.tsx` - 3 clickable Card components shown after assistant messages with branch suggestions. Shows skeleton loading state while branches are being fetched.
-- `BranchBreadcrumb.tsx` - Horizontal breadcrumb of branch points in the conversation tree. Clicking navigates back to that node.
-- `ChatInput.tsx` - Textarea + Send button. Enter to send, Shift+Enter for newline.
+- `ExploreView.tsx` - **Main app view.** Unified exploration interface replacing PersonaChatWorkspace and BranchingChat. Top bar with History/Back toggle, New button, persona selector, and session title. Two-column layout: SectionPanel (left, flex-1) and branch path cards (right, w-80). Bottom prompt bar with Textarea + Send button (Enter to send, Shift+Enter for newline). Empty state shows centered prompt input with compass icon. History view lists saved exploration sessions. Uses `useExploration` hook.
+- `SectionPanel.tsx` - Left panel showing stacked section cards grouped by exploration step. Each step group has a numbered indicator and step prompt label. Cards show section title + markdown content, collapsible for long content (>500 chars). Includes simple inline markdown rendering (bold, italic, code, headers, lists). Shows skeleton loading state.
 - `PersonaSelector.tsx` - Dropdown (shadcn DropdownMenu) to pick active persona from localStorage.
 - `PersonaManagement.tsx` - Full CRUD for personas. Exports the `Persona` interface. Personas are persisted to localStorage under key `"24agents:personas"`. Serialization and helpers are in `@/lib/persona`.
-- `PersonaChatWorkspace.tsx` - Main Chat tab. Top bar with History/Back toggle, New button, and current session title. Below that: PromptBar, then a two-column layout: IterationTimeline (left, flex-1) and PersonaPathsPanel (right, w-80). History view lists all saved sessions with green border on the active one. Uses `usePromptSession` hook.
-- `PromptBar.tsx` - Horizontal bar with Input, green Generate Button, and Reset Button. Calls `onGenerate(prompt)` on submit.
-- `IterationTimeline.tsx` - Left column showing the original prompt, then a vertical stack of IterationCard components. Each card shows persona name, timestamp, response text, refined prompt, color-coded CFNR scores, and a "Continue This Path" button. The current iteration card is highlighted with a green border.
-- `PersonaPathsPanel.tsx` - Right column showing persona path cards with avatar initials, AI-generated descriptions of how each persona would approach the prompt, and "Follow Persona" buttons. The active persona path card (matching the current iteration) is highlighted with a green border. Shows skeleton loaders while fetching.
+
+## Legacy Components (Still in codebase, not imported by active views)
+
+- `BranchingChat.tsx` - Old branching chat UI with tree navigation.
+- `PersonaChatWorkspace.tsx` - Old prompt refinement workspace with iteration timeline.
+- `PromptBar.tsx`, `IterationTimeline.tsx`, `PersonaPathsPanel.tsx` - Old sub-components of PersonaChatWorkspace.
+- `ChatMessage.tsx`, `BranchSelector.tsx`, `BranchBreadcrumb.tsx`, `ChatInput.tsx` - Old sub-components of BranchingChat.
 
 ## Conventions
 

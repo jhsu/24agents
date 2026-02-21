@@ -8,11 +8,12 @@ Custom React hooks for state management. Imported via `@/hooks/*`.
 
 ## Contents
 
-- `useChatTree.ts` - Manages a single chat tree's state. Handles localStorage sync, SSE streaming, branch fetching, and memory persistence. Passes `tree.id` as `sessionId` to `streamChat()` for memory enrichment. After branches are saved, fire-and-forget calls `persistToMemory()` to sync the conversation to long-term memory. Exposes: `tree`, `currentPath`, `isStreaming`, `isFetchingBranches`, `streamingContent`, `sendMessage()`, `selectBranch()`, `navigateTo()`, `resetTree()`, `loadTree()`.
-- `useChatList.ts` - Manages the conversation index. Exposes: `entries` (list of `ChatListEntry`), `refresh()`, `remove()`.
-- `usePromptSession.ts` - Manages a prompt refinement session. Handles persona path fetching, prompt rewriting via API, iteration tracking, and session history (save/load/delete). Exposes: `session`, `isGenerating`, `personaPaths`, `isLoadingPaths`, `sessionList`, `startSession()`, `loadExistingSession()`, `removeSession()`, `followPersona()`, `continueFromIteration()`, `reset()`, `refreshList()`.
+- `useExploration.ts` - **Primary hook.** Manages the unified exploration flow. Calls `explorePrompt()` to get structured sections + branches, tracks exploration steps, handles persona integration via `serializePersona()`, manages session history (save/load/delete). Exposes: `session`, `currentStep`, `allSections` (accumulated from all steps with stepId/stepPrompt metadata), `isLoading`, `error`, `personaId`, `setPersonaId`, `startExploration(prompt)`, `selectBranch(branchId)`, `sessionList`, `loadSession()`, `removeSession()`, `reset()`, `refreshList()`.
+- `useChatTree.ts` - Legacy. Manages a single chat tree's state for the old BranchingChat.
+- `useChatList.ts` - Legacy. Manages the conversation index for the old BranchingChat.
+- `usePromptSession.ts` - Legacy. Manages a prompt refinement session for the old PersonaChatWorkspace.
 
 ## Conventions
 
 - Hooks use `useCallback` for stable references passed to child components.
-- State is persisted to localStorage via helpers in `@/lib/chat-tree.ts` and `@/lib/iteration.ts`.
+- State is persisted to localStorage via helpers in `@/lib/exploration.ts`.
