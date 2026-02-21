@@ -44,7 +44,7 @@ bun test
 ## Key Files
 
 - `src/bun/index.ts` - Electrobun main process, creates browser window
-- `src/bun/server.ts` - Bun HTTP server (port 4000) with chat and branches API endpoints
+- `src/bun/server.ts` - Bun HTTP server (port 4000) with chat and branches API endpoints, uses `@anthropic-ai/sdk` directly
 - `src/mainview/App.tsx` - React root component, renders BranchingChat
 - `src/components/BranchingChat.tsx` - Main feature: branching chat UI with tree navigation
 - `src/components/PersonaManagement.tsx` - Persona CRUD with clipboard serialization
@@ -62,3 +62,6 @@ bun test
 - The root CLAUDE.md says "Don't use vite" but this package uses Vite + Electrobun. Follow the actual project setup.
 - `@json-render/core` and `@json-render/react` are dependencies for JSON-driven UI rendering.
 - When adding shadcn components, use `bunx shadcn@latest add <component>`.
+- The API server uses `@anthropic-ai/sdk` (not `claude-agent-sdk`) to call the Anthropic API directly.
+- `.env.local` must contain `ANTHROPIC_API_KEY`. The server loads it by walking up from `import.meta.dir` since Electrobun runs from inside the `.app` bundle.
+- All API endpoints include CORS headers for the `views://` webview origin.

@@ -15,11 +15,13 @@ Electrobun main process and API server. This is the backend/native layer of the 
 - `Utils.quit()` is called on window close to terminate the app.
 - `server.ts` runs a Bun HTTP server on port 4000 with the following endpoints:
   - `GET /health` - Health check.
-  - `GET /test` - Test prompt with SSE streaming.
-  - `POST /api/chat` - Chat endpoint. Accepts `{ prompt, history?, systemPrompt?, allowedTools? }`. Builds conversation context from history and streams the response via SSE using `@anthropic-ai/claude-agent-sdk`.
+  - `POST /api/chat` - Chat endpoint. Accepts `{ prompt, history?, systemPrompt? }`. Builds messages array from history and streams the response via SSE using `@anthropic-ai/sdk` (Anthropic API directly). SSE events are `{ type: "text", text: "..." }`.
   - `POST /api/chat/branches` - Branch suggestions endpoint. Accepts `{ conversationContext, currentResponse, personaPrompt? }`. Asks Claude for 3 branching paths and returns them as JSON. Falls back to generic suggestions on failure.
+- All API responses include CORS headers (`Access-Control-Allow-Origin: *`) since the Electrobun webview loads from `views://` protocol.
+- The server loads `.env.local` by walking up directories from `import.meta.dir` to find the project root, since Electrobun runs the bundled server from inside the `.app` bundle.
 
 ## Conventions
 
 - Do not import browser/DOM APIs here. This runs in Bun, not a browser.
 - Use Electrobun's `Updater.localInfo.channel()` to detect dev vs production.
+- API key is read from `ANTHROPIC_API_KEY` in `.env.local`. Uses `@anthropic-ai/sdk` (not `claude-agent-sdk`).

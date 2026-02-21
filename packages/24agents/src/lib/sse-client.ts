@@ -36,17 +36,10 @@ export async function* streamChat(
 
       try {
         const parsed = JSON.parse(data)
-        // The claude-agent-sdk query() yields messages; extract text content
-        if (parsed.type === "result" && parsed.result) {
-          yield parsed.result
-        } else if (parsed.type === "assistant" && parsed.message?.content) {
-          for (const block of parsed.message.content) {
-            if (block.type === "text") {
-              yield block.text
-            }
-          }
-        } else if (typeof parsed === "string") {
-          yield parsed
+        if (parsed.type === "text" && parsed.text) {
+          yield parsed.text
+        } else if (parsed.type === "error") {
+          console.error("Chat error:", parsed.error)
         }
       } catch {
         // skip unparseable lines
