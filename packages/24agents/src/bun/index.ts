@@ -1,5 +1,8 @@
 import { BrowserWindow, Updater, Utils } from "electrobun/bun";
 
+import { startServer } from './server';
+
+
 const DEV_SERVER_PORT = 5178;
 const DEV_SERVER_URL = `http://localhost:${DEV_SERVER_PORT}`;
 
@@ -19,6 +22,9 @@ async function getMainViewUrl(): Promise<string> {
   }
   return "views://mainview/index.html";
 }
+
+const server = await startServer();
+console.log(`started server on port ${server.port}`);
 
 // Create the main application window
 const url = await getMainViewUrl();
