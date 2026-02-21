@@ -8,9 +8,11 @@
     "hmr": "vite --port 5178",
     "build": "vite build && electrobun build",
     "build:prod": "vite build && electrobun build --channel prod",
-    "start": "bun run dev"
+    "start": "bun run dev",
+    "chat": "bun --hot server.ts"
   },
   "dependencies": {
+    "@anthropic-ai/claude-agent-sdk": "latest",
     "@json-render/core": "^0.8.0",
     "@json-render/react": "^0.8.0",
     "@tailwindcss/postcss": "^4.2.0",
