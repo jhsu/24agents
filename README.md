@@ -1,6 +1,7 @@
-# React + Tailwind + Vite Electrobun Template
+# HyperPrompter
 
-A fast Electrobun desktop app template with React, Tailwind CSS, and Vite for hot module replacement (HMR).
+![hyperprompter](./hyperprompter.png)
+
 
 ## Getting Started
 
