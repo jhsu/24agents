@@ -4,15 +4,20 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Purpose
 
-Electrobun main process. This is the backend/native layer of the desktop app, running in Bun (not Node.js).
+Electrobun main process and API server. This is the backend/native layer of the desktop app, running in Bun (not Node.js).
 
 ## Key Concepts
 
-- `index.ts` creates the `BrowserWindow` and manages the app lifecycle.
+- `index.ts` creates the `BrowserWindow`, starts the API server, and manages the app lifecycle.
 - In dev mode, it checks for a Vite dev server on port 5178 and loads from it for HMR. Otherwise it loads from the bundled `views://mainview/index.html`.
 - Uses Electrobun APIs (`BrowserWindow`, `Updater`, `Utils`) -- not Electron.
 - The window uses `Borderless` + `FullSizeContentView` style mask.
 - `Utils.quit()` is called on window close to terminate the app.
+- `server.ts` runs a Bun HTTP server on port 4000 with the following endpoints:
+  - `GET /health` - Health check.
+  - `GET /test` - Test prompt with SSE streaming.
+  - `POST /api/chat` - Chat endpoint. Accepts `{ prompt, history?, systemPrompt?, allowedTools? }`. Builds conversation context from history and streams the response via SSE using `@anthropic-ai/claude-agent-sdk`.
+  - `POST /api/chat/branches` - Branch suggestions endpoint. Accepts `{ conversationContext, currentResponse, personaPrompt? }`. Asks Claude for 3 branching paths and returns them as JSON. Falls back to generic suggestions on failure.
 
 ## Conventions
 

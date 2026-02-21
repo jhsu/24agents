@@ -8,7 +8,13 @@ React components for the 24agents app. Feature components live at this level; re
 
 ## Current Components
 
-- `PersonaManagement.tsx` - Full CRUD for personas. Exports the `PersonaManagement` component and the `Persona` interface. Personas are persisted to localStorage under key `"24agents:personas"` and can be serialized to a text prompt format via `serializePersona()` for clipboard copy.
+- `BranchingChat.tsx` - Main app view. Full-height layout with top bar (breadcrumb, history, persona selector), scrollable chat area, and bottom input. Orchestrates the chat tree, streaming, and branch selection.
+- `ChatMessage.tsx` - Single message bubble with Avatar. User messages right-aligned with bg-primary, assistant messages left-aligned with bg-muted. Supports streaming state.
+- `BranchSelector.tsx` - 3 clickable Card components shown after assistant messages with branch suggestions. Shows skeleton loading state while branches are being fetched.
+- `BranchBreadcrumb.tsx` - Horizontal breadcrumb of branch points in the conversation tree. Clicking navigates back to that node.
+- `ChatInput.tsx` - Textarea + Send button. Enter to send, Shift+Enter for newline.
+- `PersonaSelector.tsx` - Dropdown (shadcn DropdownMenu) to pick active persona from localStorage.
+- `PersonaManagement.tsx` - Full CRUD for personas. Exports the `Persona` interface. Personas are persisted to localStorage under key `"24agents:personas"`. Serialization and helpers are in `@/lib/persona`.
 
 ## Conventions
 

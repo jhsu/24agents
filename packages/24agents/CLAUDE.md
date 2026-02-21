@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-24agents is a desktop app for generating AI personas that help explore ideas. Users create personas with names and descriptions, which serialize to text prompts for AI-driven commentary and path suggestion.
+24agents is a desktop app for exploring ideas with AI through branching conversations. Users create personas that guide the AI's perspective, then chat with Claude. After each response, the AI suggests 2-3 branching paths to explore. Users can select a branch or type freely, and navigate back to any branch point to explore alternate paths — building a tree of explored ideas.
 
 ## Commands
 
@@ -44,8 +44,15 @@ bun test
 ## Key Files
 
 - `src/bun/index.ts` - Electrobun main process, creates browser window
-- `src/mainview/App.tsx` - React root component
-- `src/components/PersonaManagement.tsx` - Main feature: persona CRUD with clipboard serialization
+- `src/bun/server.ts` - Bun HTTP server (port 4000) with chat and branches API endpoints
+- `src/mainview/App.tsx` - React root component, renders BranchingChat
+- `src/components/BranchingChat.tsx` - Main feature: branching chat UI with tree navigation
+- `src/components/PersonaManagement.tsx` - Persona CRUD with clipboard serialization
+- `src/lib/chat-tree.ts` - Chat tree data model, types, and localStorage persistence
+- `src/lib/sse-client.ts` - SSE streaming client for chat and branch fetching
+- `src/lib/persona.ts` - Shared persona serialization and localStorage helpers
+- `src/hooks/useChatTree.ts` - Chat tree state management hook
+- `src/hooks/useChatList.ts` - Conversation list management hook
 - `electrobun.config.ts` - Desktop app build config
 - `vite.config.ts` - Frontend build config
 - `components.json` - shadcn UI config (style: "radix-lyra")

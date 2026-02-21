@@ -1,11 +1,7 @@
-import { PersonaManagement } from "@/components/PersonaManagement"
+import { BranchingChat } from "@/components/BranchingChat"
 
 function App() {
-  return (
-    <main className="mx-auto min-h-screen max-w-3xl space-y-6 p-6">
-      <PersonaManagement />
-    </main>
-  )
+  return <BranchingChat />
 }
 
 export default App
