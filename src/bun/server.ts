@@ -126,6 +126,16 @@ const evaluationResponseSchema = z.object({
   overallScore: z.number().min(1).max(10),
 });
 
+const evaluationModelResultSchema = z.object({
+  results: z.array(
+    z.object({
+      criterion: z.string().min(1),
+      score: z.number().min(1).max(10),
+      note: z.string().min(1),
+    })
+  ),
+});
+
 const insightRequestSchema = z.object({
   sessionId: z.string().optional(),
   responseText: z.string().min(1),
@@ -145,6 +155,10 @@ const insightRequestSchema = z.object({
 const insightResponseSchema = z.object({
   extractedInstructions: z.string().min(1),
   extractedAt: z.number(),
+});
+
+const insightModelResultSchema = z.object({
+  extractedInstructions: z.string().min(1),
 });
 
 const firePersonaSchema = z.object({
