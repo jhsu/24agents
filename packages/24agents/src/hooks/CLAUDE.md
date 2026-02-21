@@ -10,7 +10,7 @@ Custom React hooks for state management. Imported via `@/hooks/*`.
 
 - `useChatTree.ts` - Manages a single chat tree's state. Handles localStorage sync, SSE streaming, branch fetching, and memory persistence. Passes `tree.id` as `sessionId` to `streamChat()` for memory enrichment. After branches are saved, fire-and-forget calls `persistToMemory()` to sync the conversation to long-term memory. Exposes: `tree`, `currentPath`, `isStreaming`, `isFetchingBranches`, `streamingContent`, `sendMessage()`, `selectBranch()`, `navigateTo()`, `resetTree()`, `loadTree()`.
 - `useChatList.ts` - Manages the conversation index. Exposes: `entries` (list of `ChatListEntry`), `refresh()`, `remove()`.
-- `usePromptSession.ts` - Manages a prompt refinement session. Handles persona path fetching, prompt rewriting via API, and iteration tracking. Exposes: `session`, `isGenerating`, `personaPaths`, `isLoadingPaths`, `startSession()`, `followPersona()`, `continueFromIteration()`, `reset()`.
+- `usePromptSession.ts` - Manages a prompt refinement session. Handles persona path fetching, prompt rewriting via API, iteration tracking, and session history (save/load/delete). Exposes: `session`, `isGenerating`, `personaPaths`, `isLoadingPaths`, `sessionList`, `startSession()`, `loadExistingSession()`, `removeSession()`, `followPersona()`, `continueFromIteration()`, `reset()`, `refreshList()`.
 
 ## Conventions
 

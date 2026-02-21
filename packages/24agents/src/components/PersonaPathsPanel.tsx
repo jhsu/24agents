@@ -16,19 +16,22 @@ interface PersonaPathsPanelProps {
   isGenerating: boolean
   onFollowPersona: (path: PersonaPath) => void
   hasSession: boolean
+  activePersonaId?: string | null
 }
 
 function PersonaPathCard({
   path,
   onFollow,
   isGenerating,
+  isActive,
 }: {
   path: PersonaPath
   onFollow: () => void
   isGenerating: boolean
+  isActive: boolean
 }) {
   return (
-    <Card>
+    <Card className={isActive ? "border-green-600" : ""}>
       <CardHeader className="pb-2">
         <div className="flex items-center gap-2">
           <Avatar className="h-8 w-8">
@@ -80,6 +83,7 @@ export function PersonaPathsPanel({
   isGenerating,
   onFollowPersona,
   hasSession,
+  activePersonaId,
 }: PersonaPathsPanelProps) {
   return (
     <div className="flex flex-col h-full">
@@ -112,6 +116,7 @@ export function PersonaPathsPanel({
                 path={path}
                 onFollow={() => onFollowPersona(path)}
                 isGenerating={isGenerating}
+                isActive={path.personaId === activePersonaId}
               />
             ))}
           </div>

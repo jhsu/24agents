@@ -3,9 +3,13 @@ import {
   type PromptSession,
   type Iteration,
   type PersonaPath,
+  type SessionListEntry,
   createSession,
   addIteration,
   saveSession,
+  loadSession,
+  loadSessionList,
+  deleteSession,
 } from "@/lib/iteration"
 import { rewritePrompt, fetchPersonaPaths } from "@/lib/sse-client"
 import { loadPersonas, serializePersona, getInitials } from "@/lib/persona"
@@ -16,6 +20,11 @@ export function usePromptSession() {
   const [isGenerating, setIsGenerating] = useState(false)
   const [personaPaths, setPersonaPaths] = useState<PersonaPath[]>([])
   const [isLoadingPaths, setIsLoadingPaths] = useState(false)
+  const [sessionList, setSessionList] = useState<SessionListEntry[]>(() => loadSessionList())
+
+  const refreshList = useCallback(() => {
+    setSessionList(loadSessionList())
+  }, [])
 
   const persist = useCallback((updated: PromptSession) => {
     setSession(updated)
@@ -59,9 +68,42 @@ export function usePromptSession() {
     async (prompt: string) => {
       const newSession = createSession(prompt)
       persist(newSession)
+      refreshList()
       await loadPaths(prompt)
     },
-    [persist, loadPaths],
+    [persist, loadPaths, refreshList],
+  )
+
+  const loadExistingSession = useCallback(
+    async (id: string) => {
+      const existing = loadSession(id)
+      if (!existing) return
+
+      setSession(existing)
+      setPersonaPaths([])
+
+      // Load paths for the current iteration's refined prompt or the original prompt
+      const currentIteration = existing.currentIterationId
+        ? existing.iterations.find((i) => i.id === existing.currentIterationId)
+        : null
+      const prompt = currentIteration
+        ? currentIteration.refinedPrompt
+        : existing.originalPrompt
+      await loadPaths(prompt)
+    },
+    [loadPaths],
+  )
+
+  const removeSession = useCallback(
+    (id: string) => {
+      deleteSession(id)
+      if (session?.id === id) {
+        setSession(null)
+        setPersonaPaths([])
+      }
+      refreshList()
+    },
+    [session, refreshList],
   )
 
   const followPersona = useCallback(
@@ -103,6 +145,7 @@ export function usePromptSession() {
 
         const updated = addIteration(session, iteration)
         persist(updated)
+        refreshList()
 
         // Load new paths for the refined prompt
         await loadPaths(result.refinedPrompt)
@@ -112,7 +155,7 @@ export function usePromptSession() {
         setIsGenerating(false)
       }
     },
-    [session, isGenerating, persist, loadPaths],
+    [session, isGenerating, persist, loadPaths, refreshList],
   )
 
   const continueFromIteration = useCallback(
@@ -141,9 +184,13 @@ export function usePromptSession() {
     isGenerating,
     personaPaths,
     isLoadingPaths,
+    sessionList,
     startSession,
+    loadExistingSession,
+    removeSession,
     followPersona,
     continueFromIteration,
     reset,
+    refreshList,
   }
 }

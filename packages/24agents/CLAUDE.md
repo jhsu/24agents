@@ -47,18 +47,18 @@ bun test
 - `src/bun/server.ts` - Bun HTTP server (port 4000) with chat, branches, rewrite, persona-paths, and memory API endpoints, uses `@anthropic-ai/sdk` directly
 - `src/bun/memory-client.ts` - Thin fetch wrapper for redis/agent-memory-server REST API (working memory, long-term memory, memory prompt enrichment). All calls fail silently if the memory server is unavailable.
 - `src/mainview/App.tsx` - React root component, renders 3-tab layout (Chat, Persona UI, Manage Personas)
-- `src/components/PersonaChatWorkspace.tsx` - Prompt refinement workspace: prompt bar + two-column layout (iteration timeline left, persona paths right)
+- `src/components/PersonaChatWorkspace.tsx` - Prompt refinement workspace: top bar with session history/new, prompt bar, two-column layout (iteration timeline left, persona paths right)
 - `src/components/PromptBar.tsx` - Prompt input bar with Generate and Reset buttons
 - `src/components/IterationTimeline.tsx` - Left column showing iteration cards with persona name, refined prompt, response, and CFNR scores
 - `src/components/PersonaPathsPanel.tsx` - Right column showing persona path cards with Follow Persona buttons
 - `src/components/BranchingChat.tsx` - Branching chat UI with tree navigation (in Persona UI tab)
 - `src/components/PersonaManagement.tsx` - Persona CRUD with clipboard serialization (in Manage Personas tab)
 - `src/lib/chat-tree.ts` - Chat tree data model, types, and localStorage persistence
-- `src/lib/iteration.ts` - Iteration data model (Iteration, IterationScore, PersonaPath, PromptSession) and localStorage persistence
+- `src/lib/iteration.ts` - Iteration data model (Iteration, IterationScore, PersonaPath, PromptSession, SessionListEntry) and localStorage persistence with session list index
 - `src/lib/sse-client.ts` - API client for chat streaming, branches, prompt rewriting, persona paths, and memory persistence/search
 - `src/lib/persona.ts` - Shared persona serialization and localStorage helpers
 - `src/hooks/useChatTree.ts` - Chat tree state management hook
-- `src/hooks/usePromptSession.ts` - Prompt session state management hook (generate → follow persona → iterate)
+- `src/hooks/usePromptSession.ts` - Prompt session state management hook (generate → follow persona → iterate) with session history (save/load/delete)
 - `src/hooks/useChatList.ts` - Conversation list management hook
 - `electrobun.config.ts` - Desktop app build config
 - `vite.config.ts` - Frontend build config
