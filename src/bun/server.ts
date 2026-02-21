@@ -630,18 +630,27 @@ export async function startServer() {
 
           try {
             const structured = await generateStructured({
-              schema: evaluationResponseSchema,
+              schema: evaluationModelResultSchema,
               task: "Evaluate generated response against provided criteria using 1-10 scoring and short notes.",
               input: {
-                evaluationId,
                 criteria: parsed.data.criteria,
                 responseText: parsed.data.responseText,
               },
             });
 
-            return jsonResponse(structured);
+            const overallScore =
+              structured.results.reduce((sum, item) => sum + item.score, 0) /
+              Math.max(1, structured.results.length);
+
+            return jsonResponse(
+              evaluationResponseSchema.parse({
+                evaluationId,
+                results: structured.results,
+                overallScore: Number(overallScore.toFixed(1)),
+              })
+            );
           } catch (error) {
-            console.error("/api/evaluations/run failed, using fallback", error);
+            console.debug("/api/evaluations/run used fallback", error);
             const fallbackResults = parsed.data.criteria.map((criterion, index) => ({
               criterion,
               score: Math.min(10, 7 + ((criterion.length + index) % 3)),
@@ -698,11 +707,10 @@ export async function startServer() {
 
           try {
             const structured = await generateStructured({
-              schema: insightResponseSchema,
+              schema: insightModelResultSchema,
               task:
                 "Extract reusable instructions to prepend to future prompts based on response quality and evaluation notes.",
               input: {
-                extractedAt,
                 selectedPersonas,
                 criteria: parsed.data.criteria,
                 evaluationResults: parsed.data.evaluationResults,
@@ -714,9 +722,14 @@ export async function startServer() {
               },
             });
 
-            return jsonResponse(structured);
+            return jsonResponse(
+              insightResponseSchema.parse({
+                extractedInstructions: structured.extractedInstructions,
+                extractedAt,
+              })
+            );
           } catch (error) {
-            console.error("/api/insights/extract failed, using fallback", error);
+            console.debug("/api/insights/extract used fallback", error);
             const instructions = [
               "Prompt instructions from prior evaluation:",
               `- Optimize for: ${parsed.data.criteria.join(", ") || "clarity and feasibility"}.`,
