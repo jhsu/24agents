@@ -3,6 +3,7 @@ import { Avatar, AvatarFallback } from "./ui/avatar"
 import { Button } from "./ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Input } from "./ui/input"
+import { Skeleton } from "./ui/skeleton"
 import { Textarea } from "./ui/textarea"
 import { cn } from "@/lib/utils"
 
@@ -187,6 +188,9 @@ export function ChatBox() {
   const handleGenerate = async () => {
     setError("")
     setIsGenerating(true)
+    setGeneratedResponse("")
+    setEvaluationResults([])
+    setOverallScore(null)
     console.debug("[ChatBox] Generate + evaluate", {
       selectedPersonaIds,
       criteria,
@@ -361,15 +365,31 @@ export function ChatBox() {
 
             <div className="rounded-md border bg-background/60 p-3">
               <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Generated Response</div>
-              <div className="text-sm whitespace-pre-line leading-relaxed">{generatedResponse}</div>
+              {isGenerating ? (
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-[85%]" />
+                  <Skeleton className="h-4 w-[90%]" />
+                  <Skeleton className="h-4 w-[72%]" />
+                  <Skeleton className="h-4 w-[88%]" />
+                  <Skeleton className="h-4 w-[65%]" />
+                </div>
+              ) : (
+                <div className="text-sm whitespace-pre-line leading-relaxed">{generatedResponse}</div>
+              )}
             </div>
 
             <div className="rounded-md border bg-background/60 p-3">
               <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Evaluation</div>
-              {overallScore !== null && (
+              {!isGenerating && overallScore !== null && (
                 <div className="mb-2 text-xs font-medium">Overall: {overallScore}/10</div>
               )}
-              {evaluationResults.length === 0 ? (
+              {isGenerating ? (
+                <div className="space-y-2">
+                  <Skeleton className="h-12 w-full" />
+                  <Skeleton className="h-12 w-full" />
+                  <Skeleton className="h-12 w-full" />
+                </div>
+              ) : evaluationResults.length === 0 ? (
                 <div className="text-xs text-muted-foreground">No evaluation yet. Generate first.</div>
               ) : (
                 <div className="space-y-2">
