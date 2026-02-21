@@ -1,5 +1,9 @@
 {
   "name": "hackathon-uiplusplus",
   "private": true,
-  "workspaces": ["apps/*"]
+  "workspaces": ["apps/*"],
+  "scripts": {
+    "dev": "cd packages/24agents && bun run dev",
+    "dev:hmr": "cd packages/24agents && bun run dev:hmr"
+  }
 }
