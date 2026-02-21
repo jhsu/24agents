@@ -58,9 +58,9 @@ function getInitials(name: string): string {
     .slice(0, 2)
 }
 
-const STORAGE_KEY = "24agents:personas"
+export const STORAGE_KEY = "24agents:personas"
 
-function loadPersonas(): Persona[] {
+export function loadPersonas(): Persona[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (!raw) return []
