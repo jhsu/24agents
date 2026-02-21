@@ -5,6 +5,39 @@ export async function startServer() {
     port: 4000,
     routes: {
       "/health": () => new Response("OK"),
+      "/test": () => {
+        const prompt = "Hello, how are you?";
+          const encoder = new TextEncoder();
+          const stream = new ReadableStream({
+            async start(controller) {
+              const send = (data: unknown) => {
+                controller.enqueue(
+                  encoder.encode(`data: ${JSON.stringify(data)}\n\n`)
+                );
+              };
+
+              try {
+                for await (const message of query({ prompt, options: {
+                  pathToClaudeCodeExecutable: "/Users/joseph/.local/bin/claude"
+                } })) {
+                  send(message);
+                }
+              } catch (error) {
+                send({ type: "error", error: String(error) });
+              } finally {
+                controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+                controller.close();
+              }
+            }
+          })
+          return new Response(stream, {
+            headers: {
+              "Content-Type": "text/event-stream",
+              "Cache-Control": "no-cache",
+              Connection: "keep-alive",
+            },
+          });
+      },
       "/api/chat": {
         POST: async (req) => {
           let body: { prompt?: string; allowedTools?: string[] };
