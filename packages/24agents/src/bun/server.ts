@@ -1,4 +1,10 @@
 import Anthropic from "@anthropic-ai/sdk";
+import {
+  getMemoryPrompt,
+  putWorkingMemory,
+  createLongTermMemory,
+  searchLongTermMemory,
+} from "./memory-client";
 
 // Electrobun runs from a different CWD, so .env.local may not auto-load.
 // Try multiple known locations to find the env file.
@@ -71,6 +77,7 @@ export async function startServer() {
             prompt?: string;
             history?: { role: string; content: string }[];
             systemPrompt?: string;
+            sessionId?: string;
           };
           try {
             body = await req.json();
@@ -78,7 +85,7 @@ export async function startServer() {
             return Response.json({ error: "Invalid JSON body" }, { status: 400, headers: CORS_HEADERS });
           }
 
-          const { prompt, history, systemPrompt } = body;
+          const { prompt, history, systemPrompt, sessionId } = body;
           if (!prompt || typeof prompt !== "string" || prompt.trim() === "") {
             return Response.json({ error: "prompt is required" }, { status: 400, headers: CORS_HEADERS });
           }
@@ -95,14 +102,34 @@ export async function startServer() {
           }
           messages.push({ role: "user", content: prompt });
 
+          // Enrich system prompt with memory context (fire-and-forget safe)
+          let enrichedSystemPrompt = systemPrompt || undefined;
+          try {
+            const memoryMessages = await getMemoryPrompt(prompt, sessionId);
+            if (memoryMessages && memoryMessages.length > 0) {
+              const memoryContext = memoryMessages
+                .filter((m) => m.role === "system")
+                .map((m) => m.content)
+                .join("\n\n");
+              if (memoryContext) {
+                enrichedSystemPrompt = enrichedSystemPrompt
+                  ? `${memoryContext}\n\n${enrichedSystemPrompt}`
+                  : memoryContext;
+              }
+            }
+          } catch {
+            // Memory enrichment is optional — continue without it
+          }
+
           const encoder = new TextEncoder();
+          const allMessages = [...messages]; // capture for post-stream sync
           const stream = new ReadableStream({
             async start(controller) {
               try {
                 const apiStream = client.messages.stream({
                   model: MODEL,
                   max_tokens: 4096,
-                  system: systemPrompt || undefined,
+                  system: enrichedSystemPrompt,
                   messages,
                 });
 
@@ -127,6 +154,11 @@ export async function startServer() {
               } finally {
                 controller.enqueue(encoder.encode("data: [DONE]\n\n"));
                 controller.close();
+
+                // Fire-and-forget: sync conversation to working memory
+                if (sessionId) {
+                  putWorkingMemory(sessionId, { messages: allMessages }).catch(() => {});
+                }
               }
             },
           });
@@ -214,6 +246,225 @@ export async function startServer() {
             return Response.json({
               branches: defaultBranches(),
             }, { headers: CORS_HEADERS });
+          }
+        },
+      },
+      "/api/chat/rewrite": {
+        POST: async (req) => {
+          let body: {
+            prompt?: string;
+            personaPrompt?: string;
+            iterationContext?: string;
+          };
+          try {
+            body = await req.json();
+          } catch {
+            return Response.json({ error: "Invalid JSON body" }, { status: 400, headers: CORS_HEADERS });
+          }
+
+          const { prompt, personaPrompt, iterationContext } = body;
+          if (!prompt || !personaPrompt) {
+            return Response.json({ error: "prompt and personaPrompt are required" }, { status: 400, headers: CORS_HEADERS });
+          }
+
+          const contextBlock = iterationContext
+            ? `\n\nPrevious iteration context:\n${iterationContext}`
+            : "";
+
+          const messages: { role: "user" | "assistant"; content: string }[] = [
+            {
+              role: "user",
+              content: `You are rewriting a prompt from a specific persona's perspective. Here is the original prompt:\n\n"${prompt}"${contextBlock}\n\nRewrite this prompt to be clearer, more specific, and more effective from your persona's perspective. Then evaluate the rewritten prompt.\n\nReturn ONLY a JSON object with these fields:\n- "refinedPrompt": the rewritten prompt (string)\n- "responseText": a brief explanation of what you changed and why (string, 2-3 sentences)\n- "score": an object with C (Clarity 1-10), F (Feasibility 1-10), N (Novelty 1-10), R (Relevance 1-10)\n\nNo other text, just the JSON object.`,
+            },
+          ];
+
+          try {
+            const response = await client.messages.create({
+              model: MODEL,
+              max_tokens: 2048,
+              system: personaPrompt,
+              messages,
+            });
+
+            let fullResult = "";
+            for (const block of response.content) {
+              if (block.type === "text") {
+                fullResult += block.text;
+              }
+            }
+
+            const jsonMatch = fullResult.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+              const parsed = JSON.parse(jsonMatch[0]);
+              return Response.json({
+                refinedPrompt: parsed.refinedPrompt || prompt,
+                responseText: parsed.responseText || "Prompt refined.",
+                score: {
+                  C: Math.min(10, Math.max(1, parsed.score?.C ?? 5)),
+                  F: Math.min(10, Math.max(1, parsed.score?.F ?? 5)),
+                  N: Math.min(10, Math.max(1, parsed.score?.N ?? 5)),
+                  R: Math.min(10, Math.max(1, parsed.score?.R ?? 5)),
+                },
+              }, { headers: CORS_HEADERS });
+            }
+
+            return Response.json({
+              refinedPrompt: prompt,
+              responseText: "Could not parse response. Using original prompt.",
+              score: { C: 5, F: 5, N: 5, R: 5 },
+            }, { headers: CORS_HEADERS });
+          } catch (error) {
+            console.error("Rewrite error:", error);
+            return Response.json({
+              refinedPrompt: prompt,
+              responseText: `Error: ${error}`,
+              score: { C: 5, F: 5, N: 5, R: 5 },
+            }, { headers: CORS_HEADERS });
+          }
+        },
+      },
+      "/api/chat/persona-paths": {
+        POST: async (req) => {
+          let body: {
+            prompt?: string;
+            personas?: { id: string; name: string; description: string }[];
+          };
+          try {
+            body = await req.json();
+          } catch {
+            return Response.json({ error: "Invalid JSON body" }, { status: 400, headers: CORS_HEADERS });
+          }
+
+          const { prompt, personas } = body;
+          if (!prompt || !personas || personas.length === 0) {
+            return Response.json({ error: "prompt and personas are required" }, { status: 400, headers: CORS_HEADERS });
+          }
+
+          const personaList = personas
+            .map((p, i) => `${i + 1}. "${p.name}" - ${p.description}`)
+            .join("\n");
+
+          const messages: { role: "user" | "assistant"; content: string }[] = [
+            {
+              role: "user",
+              content: `Given the following prompt:\n\n"${prompt}"\n\nAnd these personas:\n${personaList}\n\nFor each persona, write a short 1-2 sentence description of how that persona would approach rewriting or refining this prompt. What unique perspective would they bring?\n\nReturn ONLY a JSON array where each element has:\n- "personaId": the persona's id\n- "personaName": the persona's name\n- "description": how this persona would approach the prompt (1-2 sentences)\n\nNo other text, just the JSON array.`,
+            },
+          ];
+
+          try {
+            const response = await client.messages.create({
+              model: MODEL,
+              max_tokens: 2048,
+              system: "You help users understand how different expert perspectives would approach refining a prompt.",
+              messages,
+            });
+
+            let fullResult = "";
+            for (const block of response.content) {
+              if (block.type === "text") {
+                fullResult += block.text;
+              }
+            }
+
+            const jsonMatch = fullResult.match(/\[[\s\S]*\]/);
+            if (jsonMatch) {
+              const parsed = JSON.parse(jsonMatch[0]);
+              if (Array.isArray(parsed)) {
+                const paths = parsed.map((p: Record<string, string>) => {
+                  const persona = personas.find((pp) => pp.id === p.personaId) || personas[0];
+                  const name = p.personaName || persona.name;
+                  return {
+                    personaId: p.personaId || persona.id,
+                    personaName: name,
+                    initials: name.split(" ").map((w: string) => w[0]).join("").toUpperCase().slice(0, 2),
+                    description: p.description || "Would refine this prompt from their unique perspective.",
+                  };
+                });
+                return Response.json({ paths }, { headers: CORS_HEADERS });
+              }
+            }
+
+            // Fallback: generate generic paths
+            const fallbackPaths = personas.map((p) => ({
+              personaId: p.id,
+              personaName: p.name,
+              initials: p.name.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2),
+              description: `Would refine this prompt from a ${p.name.toLowerCase()} perspective.`,
+            }));
+            return Response.json({ paths: fallbackPaths }, { headers: CORS_HEADERS });
+          } catch (error) {
+            console.error("Persona paths error:", error);
+            const fallbackPaths = personas.map((p) => ({
+              personaId: p.id,
+              personaName: p.name,
+              initials: p.name.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2),
+              description: `Would refine this prompt from a ${p.name.toLowerCase()} perspective.`,
+            }));
+            return Response.json({ paths: fallbackPaths }, { headers: CORS_HEADERS });
+          }
+        },
+      },
+      "/api/memory/persist": {
+        POST: async (req) => {
+          let body: {
+            sessionId?: string;
+            messages?: { role: string; content: string }[];
+            title?: string;
+            personaId?: string | null;
+          };
+          try {
+            body = await req.json();
+          } catch {
+            return Response.json({ error: "Invalid JSON body" }, { status: 400, headers: CORS_HEADERS });
+          }
+
+          const { sessionId, messages, personaId } = body;
+          if (!messages || messages.length === 0) {
+            return Response.json({ error: "messages are required" }, { status: 400, headers: CORS_HEADERS });
+          }
+
+          try {
+            // Convert conversation messages to long-term memory records
+            const memories = messages
+              .filter((m) => m.content.trim().length > 0)
+              .map((m) => ({
+                text: m.content,
+                session_id: sessionId,
+                namespace: "24agents",
+                user_id: personaId || undefined,
+              }));
+
+            await createLongTermMemory(memories);
+            return Response.json({ ok: true }, { headers: CORS_HEADERS });
+          } catch (error) {
+            console.error("Memory persist error:", error);
+            return Response.json({ error: "Failed to persist memory" }, { status: 500, headers: CORS_HEADERS });
+          }
+        },
+      },
+      "/api/memory/search": {
+        POST: async (req) => {
+          let body: { query?: string; limit?: number };
+          try {
+            body = await req.json();
+          } catch {
+            return Response.json({ error: "Invalid JSON body" }, { status: 400, headers: CORS_HEADERS });
+          }
+
+          const { query, limit } = body;
+          if (!query) {
+            return Response.json({ error: "query is required" }, { status: 400, headers: CORS_HEADERS });
+          }
+
+          try {
+            const results = await searchLongTermMemory(query, {
+              namespace: "24agents",
+              limit: limit || 10,
+            });
+            return Response.json(results, { headers: CORS_HEADERS });
+          } catch (error) {
+            console.error("Memory search error:", error);
+            return Response.json({ memories: [], total: 0 }, { headers: CORS_HEADERS });
           }
         },
       },

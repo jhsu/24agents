@@ -15,6 +15,10 @@ React components for the 24agents app. Feature components live at this level; re
 - `ChatInput.tsx` - Textarea + Send button. Enter to send, Shift+Enter for newline.
 - `PersonaSelector.tsx` - Dropdown (shadcn DropdownMenu) to pick active persona from localStorage.
 - `PersonaManagement.tsx` - Full CRUD for personas. Exports the `Persona` interface. Personas are persisted to localStorage under key `"24agents:personas"`. Serialization and helpers are in `@/lib/persona`.
+- `PersonaChatWorkspace.tsx` - Main Chat tab. Renders PromptBar at top, then a two-column layout: IterationTimeline (left, flex-1) and PersonaPathsPanel (right, w-80). Uses `usePromptSession` hook.
+- `PromptBar.tsx` - Horizontal bar with Input, green Generate Button, and Reset Button. Calls `onGenerate(prompt)` on submit.
+- `IterationTimeline.tsx` - Left column showing the original prompt, then a vertical stack of IterationCard components. Each card shows persona name, timestamp, response text, refined prompt, color-coded CFNR scores, and a "Continue This Path" button.
+- `PersonaPathsPanel.tsx` - Right column showing persona path cards with avatar initials, AI-generated descriptions of how each persona would approach the prompt, and "Follow Persona" buttons. Shows skeleton loaders while fetching.
 
 ## Conventions
 
