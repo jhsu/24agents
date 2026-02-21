@@ -65,7 +65,7 @@ export async function startServer() {
       "/test": async () => {
         const result = streamText({
           model: anthropic("claude-haiku-4-5"),
-          system: '',
+          system: 'say hello',
           prompt: "hello",
         });
 

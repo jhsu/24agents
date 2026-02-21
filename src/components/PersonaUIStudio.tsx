@@ -5,6 +5,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Persona, loadPersonas } from "@/components/PersonaManagement"
 import { PersonaUIRenderer } from "@/lib/json-render/renderer"
 
+const PERSONA_UI_API = "http://localhost:4000/api/persona-ui"
+const HEALTH_API = "http://localhost:4000/health"
+
 function getGenerationPrompt(persona: Persona): string {
   return [
     `Generate a compact UI for configuring this persona.`,
@@ -17,9 +20,11 @@ function getGenerationPrompt(persona: Persona): string {
 export function PersonaUIStudio() {
   const [personas, setPersonas] = React.useState<Persona[]>(() => loadPersonas())
   const [selectedPersonaId, setSelectedPersonaId] = React.useState<string>("")
+  const [healthStatus, setHealthStatus] = React.useState<string>("")
+  const [isCheckingHealth, setIsCheckingHealth] = React.useState(false)
 
   const { messages, isStreaming, error, send, clear } = useChatUI({
-    api: "/api/persona-ui",
+    api: PERSONA_UI_API,
   })
 
   React.useEffect(() => {
@@ -51,6 +56,28 @@ export function PersonaUIStudio() {
   const handleGenerate = async () => {
     if (!selectedPersona) return
     await send(getGenerationPrompt(selectedPersona))
+  }
+
+  const handleHealthCheck = async () => {
+    setIsCheckingHealth(true)
+    setHealthStatus("")
+
+    try {
+      const response = await fetch(HEALTH_API)
+      const text = await response.text()
+
+      if (!response.ok) {
+        setHealthStatus(`Health check failed (${response.status}): ${text || response.statusText}`)
+        return
+      }
+
+      setHealthStatus(`Health check OK: ${text || "(empty response)"}`)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      setHealthStatus(`Health check error: ${message}`)
+    } finally {
+      setIsCheckingHealth(false)
+    }
   }
 
   return (
@@ -90,6 +117,9 @@ export function PersonaUIStudio() {
             <Button size="sm" onClick={handleGenerate} disabled={!selectedPersona || isStreaming}>
               {isStreaming ? "Generating..." : "Generate UI"}
             </Button>
+            <Button variant="secondary" size="sm" onClick={handleHealthCheck} disabled={isCheckingHealth}>
+              {isCheckingHealth ? "Checking..." : "Test /health"}
+            </Button>
             <Button
               variant="ghost"
               size="sm"
@@ -101,6 +131,7 @@ export function PersonaUIStudio() {
           </div>
 
           {error && <p className="text-destructive text-xs">{error.message}</p>}
+          {healthStatus && <p className="text-xs text-muted-foreground">{healthStatus}</p>}
         </CardContent>
       </Card>
 

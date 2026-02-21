@@ -4,3 +4,4 @@ packages/24agents/dist/
 bun.lock
 dist/
 build/
+.env
