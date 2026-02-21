@@ -1,125 +1,57 @@
-# Project overview
+# CLAUDE.md
 
-Aid exploration with the user. the user provides an initial prompt and the personas suggest paths to explore.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Project Overview
 
-# Personas
+24agents is a desktop app for generating AI personas that help explore ideas. Users create personas with names and descriptions, which serialize to text prompts for AI-driven commentary and path suggestion.
 
-Generate personas that will help get work done when exploring ideas with ai.
+## Commands
 
+```bash
+# Development (with HMR)
+bun run dev:hmr
 
-## Persona management
+# Development (without HMR)
+bun run dev
 
-Generate a ui using json-render and a catalog of components that tweak the settings of the UI. The settings should be based on the persona name and description. the persona should be then be serializable to text to be used in ai prompting when exploring ideas to add commentary or when suggesting new paths to explore.
+# Build
+bun run build
 
+# Production build
+bun run build:prod
 
-
-The app lives in `packages/24agents/`
-
-Default to using Bun instead of Node.js.
-
-- Use `bun <file>` instead of `node <file>` or `ts-node <file>`
-- Use `bun test` instead of `jest` or `vitest`
-- Use `bun build <file.html|file.ts|file.css>` instead of `webpack` or `esbuild`
-- Use `bun install` instead of `npm install` or `yarn install` or `pnpm install`
-- Use `bun run <script>` instead of `npm run <script>` or `yarn run <script>` or `pnpm run <script>`
-- Use `bunx <package> <command>` instead of `npx <package> <command>`
-- Bun automatically loads .env, so don't use dotenv.
-
-## APIs
-
-- `Bun.serve()` supports WebSockets, HTTPS, and routes. Don't use `express`.
-- `bun:sqlite` for SQLite. Don't use `better-sqlite3`.
-- `Bun.redis` for Redis. Don't use `ioredis`.
-- `Bun.sql` for Postgres. Don't use `pg` or `postgres.js`.
-- `WebSocket` is built-in. Don't use `ws`.
-- Prefer `Bun.file` over `node:fs`'s readFile/writeFile
-- Bun.$`ls` instead of execa.
-
-## Testing
-
-Use `bun test` to run tests.
-
-```ts#index.test.ts
-import { test, expect } from "bun:test";
-
-test("hello world", () => {
-  expect(1).toBe(1);
-});
+# Run tests
+bun test
 ```
 
-## Frontend
+## Architecture
 
-Use HTML imports with `Bun.serve()`. Don't use `vite`. HTML imports fully support React, CSS, Tailwind.
+**Desktop framework:** Electrobun (Bun-native, not Electron). The main process runs in `src/bun/index.ts` using `BrowserWindow`.
 
-Use shadcn components
+**Build pipeline:** Vite builds the React frontend into `dist/`, then Electrobun packages it into a desktop app. In dev mode with HMR, Electrobun loads from Vite's dev server on port 5178.
 
-Server:
+**Frontend:** React 18 + TypeScript, rendered in `src/mainview/`. Entry point is `src/mainview/main.tsx`, root component is `src/mainview/App.tsx`.
 
-```ts#index.ts
-import index from "./index.html"
+**UI components:** shadcn/ui built on Radix UI primitives, located in `src/components/ui/`. Uses CVA (class-variance-authority) for variant styling and a `cn()` utility from `src/components/lib/utils.ts`.
 
-Bun.serve({
-  routes: {
-    "/": index,
-    "/api/users/:id": {
-      GET: (req) => {
-        return new Response(JSON.stringify({ id: req.params.id }));
-      },
-    },
-  },
-  // optional websocket support
-  websocket: {
-    open: (ws) => {
-      ws.send("Hello, world!");
-    },
-    message: (ws, message) => {
-      ws.send(message);
-    },
-    close: (ws) => {
-      // handle close
-    }
-  },
-  development: {
-    hmr: true,
-    console: true,
-  }
-})
-```
+**Styling:** Tailwind CSS 4.2 with CSS variables (oklch color space). Dark mode only (`class="dark"` on root HTML element).
 
-HTML files can import .tsx, .jsx or .js files directly and Bun's bundler will transpile & bundle automatically. `<link>` tags can point to stylesheets and Bun's CSS bundler will bundle.
+**State:** React hooks + localStorage (key prefix: `"24agents:"`). No external state management library.
 
-```html#index.html
-<html>
-  <body>
-    <h1>Hello, world!</h1>
-    <script type="module" src="./frontend.tsx"></script>
-  </body>
-</html>
-```
+**Path aliases:** `@/*` maps to `src/*` (configured in tsconfig.json and vite.config.ts).
 
-With the following `frontend.tsx`:
+## Key Files
 
-```tsx#frontend.tsx
-import React from "react";
-import { createRoot } from "react-dom/client";
+- `src/bun/index.ts` - Electrobun main process, creates browser window
+- `src/mainview/App.tsx` - React root component
+- `src/components/PersonaManagement.tsx` - Main feature: persona CRUD with clipboard serialization
+- `electrobun.config.ts` - Desktop app build config
+- `vite.config.ts` - Frontend build config
+- `components.json` - shadcn UI config (style: "radix-lyra")
 
-// import .css files directly and it works
-import './index.css';
+## Notes
 
-const root = createRoot(document.body);
-
-export default function Frontend() {
-  return <h1>Hello, world!</h1>;
-}
-
-root.render(<Frontend />);
-```
-
-Then, run index.ts
-
-```sh
-bun --hot ./index.ts
-```
-
-For more information, read the Bun API docs in `node_modules/bun-types/docs/**.mdx`.
+- The root CLAUDE.md says "Don't use vite" but this package uses Vite + Electrobun. Follow the actual project setup.
+- `@json-render/core` and `@json-render/react` are dependencies for JSON-driven UI rendering.
+- When adding shadcn components, use `bunx shadcn@latest add <component>`.
