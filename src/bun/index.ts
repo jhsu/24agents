@@ -27,6 +27,7 @@ const DEFAULT_DEBOUNCE_MS = 3500;
 const DEFAULT_MAX_WAIT_MS = 12000;
 const DEFAULT_MAX_BATCH_SIZE = 20;
 const DEFAULT_REDIS_CHANNEL = "claude-code:log";
+const MAX_TWEET_HISTORY = 200;
 
 type Persona = {
   name: string;
@@ -58,6 +59,7 @@ type TimelineRPCSchema = {
         params: undefined;
         response: { stopped: boolean };
       };
+      getTimelineTweets: { params: undefined; response: TweetPost[] };
       getPersonas: { params: undefined; response: PersonaData[] };
       addPersona: { params: AddPersonaParams; response: PersonaData };
       updatePersona: { params: UpdatePersonaParams; response: PersonaData };
@@ -172,6 +174,7 @@ let maxWaitTimer: ReturnType<typeof setTimeout> | null = null;
 let pendingLogs: ClaudeHookLog[] = [];
 let isFlushing = false;
 let tweetCounter = 0;
+let tweetHistory: TweetPost[] = [];
 
 function clearFlushTimers() {
   if (flushTimer) {
@@ -446,6 +449,7 @@ async function flushBufferedLogs(rpc: AppRPC) {
     sendStatus(rpc, { state: "generating", personaCount });
 
     for (const tweet of tweets) {
+      tweetHistory = [tweet, ...tweetHistory].slice(0, MAX_TWEET_HISTORY);
       rpc.send.tweetPushed(tweet);
     }
     sendStatus(rpc, { state: "idle" });
@@ -569,6 +573,9 @@ const rpc = BrowserView.defineRPC<TimelineRPCSchema>({
         const stopped = await stopRedisSubscription(rpc);
         return { stopped };
       },
+      getTimelineTweets() {
+        return tweetHistory;
+      },
       getPersonas() {
         return personas.map(({ handle, name, avatarUrl, description }) => ({
           handle,
@@ -618,6 +625,8 @@ const mainWindow = new BrowserWindow({
     FullSizeContentView: true,
   },
 });
+
+mainWindow.setAlwaysOnTop(true);
 
 // Quit the app when the main window is closed
 mainWindow.on("close", () => {

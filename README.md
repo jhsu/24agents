@@ -44,7 +44,7 @@ cp .env.example .env
 
 ### Configure Claude Code hooks
 
-Add a hook in your Claude Code settings to publish events to Redis. The app listens on the `claude-code:log` channel by default.
+This repo's hook script (`.claude/hooks/log_hook.py`) appends each event to `claude.log` and also publishes the same JSON line to Redis. The app listens on the `claude-code:log` channel by default.
 
 ## Running
 
@@ -96,6 +96,7 @@ Environment variables:
 | Variable | Default | Description |
 |---|---|---|
 | `REDIS_URL` | `redis://127.0.0.1:6379` | Redis connection URL |
+| `REDIS_CHANNEL` | `claude-code:log` | Redis pub/sub channel used by hook publisher |
 | `ANTHROPIC_API_KEY` | — | Enables AI tweet generation |
 
 Stream options (set from the UI or via RPC):

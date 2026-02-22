@@ -26,6 +26,7 @@ type TimelineRPCSchema = {
         params: undefined;
         response: { stopped: boolean };
       };
+      getTimelineTweets: { params: undefined; response: TweetPost[] };
       getPersonas: { params: undefined; response: PersonaData[] };
       addPersona: { params: AddPersonaParams; response: PersonaData };
       updatePersona: { params: UpdatePersonaParams; response: PersonaData };
@@ -92,12 +93,23 @@ function App() {
 
   useEffect(() => {
     const onTweetPushed = (tweet: TweetPost) => {
-      setTweets((current) => [tweet, ...current]);
+      setTweets((current) => {
+        if (current.some((existing) => existing.id === tweet.id)) {
+          return current;
+        }
+        return [tweet, ...current];
+      });
     };
     const onProcessingStatus = (s: ProcessingStatus) => setStatus(s);
 
     rpc.addMessageListener("tweetPushed", onTweetPushed);
     rpc.addMessageListener("processingStatus", onProcessingStatus);
+    void rpc.request
+      .getTimelineTweets(undefined)
+      .then((initialTweets) => {
+        setTweets(initialTweets);
+      })
+      .catch(() => {});
     void rpc.request.openTimelineStream({ debounceMs: 3500 });
 
     return () => {
@@ -133,15 +145,24 @@ function App() {
 
       {tab === "feed" && (
         <main className="mx-auto flex max-w-2xl flex-col gap-3 px-4 py-6">
-          {tweets.map((tweet) => (
-            <TweetCard
-              key={tweet.id}
-              name={tweet.name}
-              handle={tweet.handle}
-              avatarUrl={tweet.avatarUrl}
-              text={tweet.text}
-            />
-          ))}
+          {tweets.length === 0 ? (
+            <div className="rounded-md border border-dashed border-border bg-muted/20 px-6 py-10 text-center">
+              <p className="text-sm font-medium text-foreground">No tweets yet</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Agent updates will appear here once the timeline starts receiving events.
+              </p>
+            </div>
+          ) : (
+            tweets.map((tweet) => (
+              <TweetCard
+                key={tweet.id}
+                name={tweet.name}
+                handle={tweet.handle}
+                avatarUrl={tweet.avatarUrl}
+                text={tweet.text}
+              />
+            ))
+          )}
         </main>
       )}
 
