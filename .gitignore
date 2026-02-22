@@ -1,3 +1,7 @@
 node_modules
 packages/24agents/build/
 packages/24agents/dist/
+claude.log
+.env
+build
+dist
