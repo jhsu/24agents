@@ -12,9 +12,9 @@ import {
   loadExploreList,
   deleteExploreSession,
 } from "@/lib/exploration"
-import type { IterationScore } from "@/lib/iteration"
+import type { IterationScore, ExternalResource } from "@/lib/iteration"
 import type { PersonaPath } from "@/lib/iteration"
-import { explorePrompt, rewritePrompt, fetchPersonaPaths, scorePrompt } from "@/lib/sse-client"
+import { explorePrompt, rewritePrompt, fetchPersonaPaths, scorePrompt, fetchResources } from "@/lib/sse-client"
 import { serializePersona, loadPersonas, type Persona } from "@/lib/persona"
 
 export function useExploration() {
@@ -30,6 +30,10 @@ export function useExploration() {
   const [isRefining, setIsRefining] = React.useState(false)
   const [personaPaths, setPersonaPaths] = React.useState<PersonaPath[]>([])
   const [isLoadingPaths, setIsLoadingPaths] = React.useState(false)
+
+  // External resources state
+  const [resources, setResources] = React.useState<ExternalResource[]>([])
+  const [isLoadingResources, setIsLoadingResources] = React.useState(false)
 
   const currentStep = React.useMemo(() => {
     if (!session?.currentStepId) return null
@@ -64,6 +68,20 @@ export function useExploration() {
     const persona = personas.find((p: Persona) => p.id === personaId)
     if (!persona) return undefined
     return serializePersona(persona)
+  }, [personaId])
+
+  // Fire-and-forget resource fetching
+  const loadResources = React.useCallback(async (prompt: string) => {
+    setIsLoadingResources(true)
+    try {
+      const persona = personaId ? loadPersonas().find((p: Persona) => p.id === personaId) : null
+      const results = await fetchResources(prompt, undefined, undefined, persona?.name)
+      setResources(results)
+    } catch {
+      setResources([])
+    } finally {
+      setIsLoadingResources(false)
+    }
   }, [personaId])
 
   // Load persona paths for a prompt
@@ -101,12 +119,13 @@ export function useExploration() {
       setSession(updatedSession)
       setSessionList(loadExploreList())
       setPending(null)
+      loadResources(prompt)
     } catch (err) {
       setError(String(err))
     } finally {
       setIsLoading(false)
     }
-  }, [personaId, getSystemPrompt])
+  }, [personaId, getSystemPrompt, loadResources])
 
   const selectBranch = React.useCallback(async (branchId: string) => {
     if (!session || !currentStep) return
@@ -135,12 +154,13 @@ export function useExploration() {
       setSession(updatedSession)
       setSessionList(loadExploreList())
       setPending(null)
+      loadResources(branchPrompt)
     } catch (err) {
       setError(String(err))
     } finally {
       setIsLoading(false)
     }
-  }, [session, currentStep, buildHistory, getSystemPrompt])
+  }, [session, currentStep, buildHistory, getSystemPrompt, loadResources])
 
   // Enter refinement mode for a prompt
   const enterRefinementMode = React.useCallback((prompt: string, parentStepId: string | null = null) => {
@@ -150,6 +170,7 @@ export function useExploration() {
       activeRefinementId: null,
       parentStepId,
     })
+    setResources([])
     loadPaths(prompt)
   }, [loadPaths])
 
@@ -340,11 +361,34 @@ export function useExploration() {
     }
   }, [session])
 
+  const navigateToStep = React.useCallback((stepId: string) => {
+    if (!session) return
+    const stepIdx = session.steps.findIndex((s) => s.id === stepId)
+    if (stepIdx < 0) return
+    // Don't navigate if already on this step
+    if (session.currentStepId === stepId) return
+
+    const truncatedSteps = session.steps.slice(0, stepIdx + 1).map((s, i) =>
+      i === stepIdx ? { ...s, selectedBranchId: null } : s
+    )
+    const updatedSession: ExploreSession = {
+      ...session,
+      steps: truncatedSteps,
+      currentStepId: stepId,
+      updatedAt: Date.now(),
+    }
+    saveExploreSession(updatedSession)
+    setSession(updatedSession)
+    setPending(null)
+    setPersonaPaths([])
+  }, [session])
+
   const reset = React.useCallback(() => {
     setSession(null)
     setError(null)
     setPending(null)
     setPersonaPaths([])
+    setResources([])
   }, [])
 
   const refreshList = React.useCallback(() => {
@@ -365,7 +409,11 @@ export function useExploration() {
     loadSession,
     removeSession,
     reset,
+    navigateToStep,
     refreshList,
+    // Resources
+    resources,
+    isLoadingResources,
     // Refinement
     pending,
     isScoring,

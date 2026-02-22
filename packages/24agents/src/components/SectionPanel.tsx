@@ -227,12 +227,15 @@ function formatInline(text: string): React.ReactNode {
     const codeMatch = remaining.match(/`(.+?)`/)
     // Italic
     const italicMatch = remaining.match(/\*(.+?)\*/)
+    // Link
+    const linkMatch = remaining.match(/\[(.+?)\]\((.+?)\)/)
 
     // Find the earliest match
     const matches = [
       boldMatch ? { type: "bold", match: boldMatch, idx: boldMatch.index! } : null,
       codeMatch ? { type: "code", match: codeMatch, idx: codeMatch.index! } : null,
       italicMatch && (!boldMatch || italicMatch.index! < boldMatch.index!) ? { type: "italic", match: italicMatch, idx: italicMatch.index! } : null,
+      linkMatch ? { type: "link", match: linkMatch, idx: linkMatch.index! } : null,
     ].filter(Boolean).sort((a, b) => a!.idx - b!.idx)
 
     const first = matches[0]
@@ -250,6 +253,20 @@ function formatInline(text: string): React.ReactNode {
       parts.push(<strong key={key++} className="text-foreground font-semibold">{first.match![1]}</strong>)
     } else if (first.type === "code") {
       parts.push(<code key={key++} className="bg-muted px-1 py-0.5 rounded text-xs font-mono">{first.match![1]}</code>)
+    } else if (first.type === "link") {
+      const url = first.match![2]
+      parts.push(
+        <a
+          key={key++}
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={(e) => { e.preventDefault(); window.open(url, "_blank") }}
+          className="text-green-400 underline hover:text-green-300"
+        >
+          {first.match![1]}
+        </a>
+      )
     } else {
       parts.push(<em key={key++}>{first.match![1]}</em>)
     }

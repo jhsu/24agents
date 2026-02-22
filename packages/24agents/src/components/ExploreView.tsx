@@ -4,9 +4,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Textarea } from "@/components/ui/textarea"
 import { Skeleton } from "@/components/ui/skeleton"
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable"
 import { PersonaSelector } from "@/components/PersonaSelector"
 import { SectionPanel } from "@/components/SectionPanel"
 import { RefinementPanel } from "@/components/RefinementPanel"
+import { ExternalResourcesPanel } from "@/components/ExternalResourcesPanel"
 import { ScoreRow } from "@/components/ScoreBadge"
 import { useExploration } from "@/hooks/useExploration"
 import type { Persona } from "@/lib/persona"
@@ -37,7 +39,11 @@ export function ExploreView() {
     loadSession,
     removeSession,
     reset,
+    navigateToStep,
     refreshList,
+    // Resources
+    resources,
+    isLoadingResources,
     // Refinement
     pending,
     isScoring,
@@ -147,16 +153,18 @@ export function ExploreView() {
           onCancel={cancelRefinement}
         />
       ) : hasContent ? (
-        <div className="flex-1 min-h-0 overflow-hidden flex">
+        <ResizablePanelGroup orientation="horizontal" className="flex-1 min-h-0">
           {/* Left: Section cards */}
-          <div className="flex-1 min-w-0 border-r border-border">
+          <ResizablePanel defaultSize={65} minSize={30}>
             <SectionPanel sections={allSections} isLoading={isLoading} />
-          </div>
+          </ResizablePanel>
 
-          {/* Right: Branch paths */}
-          <div className="w-80 shrink-0 flex flex-col">
-            <ScrollArea className="flex-1">
-              <div className="p-4 space-y-3">
+          <ResizableHandle withHandle />
+
+          {/* Right: Branch paths + resources */}
+          <ResizablePanel defaultSize={35} minSize={20}>
+            <ScrollArea className="h-full min-w-0">
+              <div className="p-4 space-y-3 overflow-hidden">
                 <div className="flex items-center gap-2 mb-2">
                   <Compass className="h-4 w-4 text-green-500" />
                   <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -224,35 +232,46 @@ export function ExploreView() {
                   </p>
                 )}
 
+                <ExternalResourcesPanel
+                  resources={resources}
+                  isLoading={isLoadingResources}
+                />
+
                 {/* Exploration path breadcrumb */}
                 {session && session.steps.length > 1 && (
                   <div className="mt-4 pt-4 border-t border-border">
                     <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2 block">
                       Exploration Path
                     </span>
-                    <div className="space-y-1.5">
-                      {session.steps.map((step, idx) => (
-                        <div
-                          key={step.id}
-                          className={`flex items-center gap-2 text-xs ${
-                            step.id === currentStep?.id
-                              ? "text-green-400 font-medium"
-                              : "text-muted-foreground"
-                          }`}
-                        >
-                          <span className="flex items-center justify-center h-4 w-4 rounded-full bg-muted text-[9px] font-bold shrink-0">
-                            {idx + 1}
-                          </span>
-                          <span className="truncate">{step.prompt}</span>
-                        </div>
-                      ))}
+                    <div className="space-y-1">
+                      {session.steps.map((step, idx) => {
+                        const isCurrent = step.id === currentStep?.id
+                        return (
+                          <div
+                            key={step.id}
+                            className={`flex items-center gap-2.5 text-sm rounded-md px-2 py-1.5 transition-colors ${
+                              isCurrent
+                                ? "text-green-400 font-medium bg-green-600/10"
+                                : "text-muted-foreground hover:bg-muted/50 cursor-pointer"
+                            }`}
+                            onClick={() => !isCurrent && navigateToStep(step.id)}
+                          >
+                            <span className={`flex items-center justify-center h-6 w-6 rounded-full text-[11px] font-bold shrink-0 ${
+                              isCurrent ? "bg-green-600 text-white" : "bg-muted"
+                            }`}>
+                              {idx + 1}
+                            </span>
+                            <span className="line-clamp-2">{step.prompt}</span>
+                          </div>
+                        )
+                      })}
                     </div>
                   </div>
                 )}
               </div>
             </ScrollArea>
-          </div>
-        </div>
+          </ResizablePanel>
+        </ResizablePanelGroup>
       ) : (
         /* Empty state / initial prompt */
         <div className="flex-1 flex items-center justify-center px-6">

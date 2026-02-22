@@ -47,8 +47,8 @@ bun test
 - `src/bun/server.ts` - Bun HTTP server (port 4000) with explore, chat, branches, rewrite, persona-paths, score-prompt, and memory API endpoints, uses `@anthropic-ai/sdk` directly
 - `src/bun/memory-client.ts` - Thin fetch wrapper for redis/agent-memory-server REST API (working memory, long-term memory, memory prompt enrichment). All calls fail silently if the memory server is unavailable.
 - `src/mainview/App.tsx` - React root component, renders 2-tab layout (Explore, Manage Personas)
-- `src/components/ExploreView.tsx` - Unified exploration view with inline refinement. Three rendering states: normal (sections + branches), refining (RefinementPanel), history. Branch cards show CFNR score previews and "Refine"/"Explore" buttons. Prompt bar pinned at bottom via flex column layout with `overflow-hidden` on the content area.
-- `src/components/SectionPanel.tsx` - Left panel showing stacked section cards grouped by exploration step, with step indicators, CFNR score badges in step headers, collapsible content, and simple markdown rendering.
+- `src/components/ExploreView.tsx` - Unified exploration view with inline refinement. Three rendering states: normal (sections + branches), refining (RefinementPanel), history. Branch cards show CFNR score previews and "Refine"/"Explore" buttons. Prompt bar pinned at bottom via flex column layout with `overflow-hidden` on the content area. Exploration path breadcrumb is clickable — past steps navigate back via `navigateToStep()`.
+- `src/components/SectionPanel.tsx` - Left panel showing stacked section cards grouped by exploration step, with step indicators, CFNR score badges in step headers, collapsible content, and simple markdown rendering (bold, italic, code, links). Markdown links open in system browser via `window.open()`.
 - `src/components/ScoreBadge.tsx` - Shared CFNR score display components (`ScoreBadge`, `ScoreRow`). Uses `scoreColor()` from iteration.ts.
 - `src/components/RefinementPanel.tsx` - Inline prompt refinement UI. Two-column layout: refinement cards with persona attribution + scores (left), persona suggestion cards (right). "Explore Now" commits the active refinement or original prompt.
 - `src/components/PersonaSelector.tsx` - Dropdown (shadcn DropdownMenu) to pick active persona from localStorage.
@@ -56,7 +56,7 @@ bun test
 - `src/lib/exploration.ts` - Exploration data model. Defines `ExploreSection`, `ExploreBranch` (with `previewScore`), `ExploreStep` (with `score`, `refinements`, `activeRefinementId`), `PromptRefinement`, `PendingExploration`, `ExploreSession`, `ExploreSessionListEntry` types. Persistence via localStorage.
 - `src/lib/sse-client.ts` - API client for explore endpoint (returns scores), chat streaming, branches, prompt rewriting, persona paths, prompt scoring, and memory persistence/search
 - `src/lib/persona.ts` - Shared persona serialization and localStorage helpers
-- `src/hooks/useExploration.ts` - Exploration state management hook with inline refinement. Core flow: startExploration → selectBranch → recurse. Refinement flow: enterRefinementMode/scoreAndRefine → refinePrompt (per persona) → commitExploration. Manages session history, persona integration, refinement state machine, persona path loading.
+- `src/hooks/useExploration.ts` - Exploration state management hook with inline refinement. Core flow: startExploration → selectBranch → recurse. Refinement flow: enterRefinementMode/scoreAndRefine → refinePrompt (per persona) → commitExploration. Navigation: navigateToStep(stepId) truncates to a past step and re-exposes its branches. Manages session history, persona integration, refinement state machine, persona path loading.
 - `electrobun.config.ts` - Desktop app build config
 - `vite.config.ts` - Frontend build config
 - `docker-compose.yml` - Redis Stack + agent-memory-server for cross-conversation memory (optional, app works without it)
